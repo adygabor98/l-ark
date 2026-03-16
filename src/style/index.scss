@@ -1,0 +1,16 @@
+//@import './variables.scss';
+@forward './font.scss';
+@forward './overwrite.scss';
+
+input::placeholder {
+    font-size: 12px;
+}
+
+input:focus {
+    outline: none;
+}
+
+.ant-input-outlined:focus, .ant-input-outlined:focus-within {
+    border: none!important;
+    box-shadow: none!important;
+}

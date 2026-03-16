@@ -1,0 +1,85 @@
+import type { Operation } from "../types/operation";
+
+export const mockOperations: Operation[] = [
+  {
+    id: "op-1",
+    title: "Batch Production Process",
+    description:
+      "Standard batch production workflow for chemical compounds including preparation, mixing, reaction monitoring, and quality verification.",
+    divisionId: "div-1",
+    steps: [
+      {
+        id: "step-1",
+        title: "Material Preparation",
+        description: "Verify and prepare all raw materials according to the batch recipe.",
+        isBlocking: true,
+        isRequired: true,
+        fileTemplateIds: ["ft-1", "ft-3"],
+        position: { x: 250, y: 0 },
+      },
+      {
+        id: "step-2",
+        title: "Mixing Phase",
+        description: "Combine materials in the specified order and ratios.",
+        isBlocking: true,
+        isRequired: true,
+        fileTemplateIds: ["ft-3"],
+        position: { x: 250, y: 150 },
+      },
+      {
+        id: "step-3",
+        title: "Quality Check",
+        description: "Take samples and run quality control tests.",
+        isBlocking: false,
+        isRequired: true,
+        fileTemplateIds: ["ft-2", "ft-6"],
+        position: { x: 250, y: 300 },
+      },
+      {
+        id: "step-4",
+        title: "Packaging",
+        description: "Package the final product according to specifications.",
+        isBlocking: false,
+        isRequired: false,
+        fileTemplateIds: [],
+        position: { x: 250, y: 450 },
+      },
+    ],
+    edges: [
+      { id: "e-1-2", source: "step-1", target: "step-2" },
+      { id: "e-2-3", source: "step-2", target: "step-3" },
+      { id: "e-3-4", source: "step-3", target: "step-4" },
+    ],
+    createdAt: "2026-03-01T10:00:00Z",
+    updatedAt: "2026-03-10T14:30:00Z",
+  },
+  {
+    id: "op-2",
+    title: "Equipment Maintenance Cycle",
+    description: "Scheduled preventive maintenance procedure for reactor vessels.",
+    divisionId: "div-4",
+    steps: [
+      {
+        id: "step-5",
+        title: "Shutdown & Isolation",
+        description: "Safely shut down the equipment and isolate from energy sources.",
+        isBlocking: true,
+        isRequired: true,
+        fileTemplateIds: ["ft-1", "ft-5"],
+        position: { x: 250, y: 0 },
+      },
+      {
+        id: "step-6",
+        title: "Inspection",
+        description: "Perform visual and mechanical inspection of components.",
+        isBlocking: false,
+        isRequired: true,
+        fileTemplateIds: ["ft-2", "ft-5"],
+        position: { x: 250, y: 150 },
+      },
+    ],
+    edges: [{ id: "e-5-6", source: "step-5", target: "step-6" }],
+    createdAt: "2026-02-15T08:00:00Z",
+    updatedAt: "2026-03-05T11:00:00Z",
+  },
+];

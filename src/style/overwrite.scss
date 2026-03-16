@@ -1,0 +1,47 @@
+
+/* Sileo toaster: pre-declare centering so it's available before the lib's
+   dynamic __insertCSS runs, preventing the left→center flash on first load. */
+[data-sileo-viewport][data-position$="center"] {
+	left: 50%;
+	transform: translateX(-50%);
+}
+
+/* Ensure toasts always render above dialogs/overlays (z-50 = 50). */
+[data-sileo-viewport] {
+	z-index: 9999;
+}
+
+.ant-select-outlined:not(.ant-select-customize-input) .ant-select-selector,
+.ant-select-focused .ant-select-outlined:not(.ant-select-disabled):not(.ant-select-customize-input):not(.ant-pagination-size-changer) .ant-select-selector {
+	border: unset !important;
+	box-shadow: none !important;
+	background-color: transparent!important;
+}
+
+.ant-picker-outlined {
+	border: unset !important;
+	box-shadow: none !important;
+	background-color: transparent!important;
+	
+	&::hover {
+		border: unset !important;
+		box-shadow: unset !important;;
+	}
+}
+
+
+.ant-select-selector {
+	display: flex;
+	align-items: center;
+	height: 50px;
+	padding-inline: 10px;
+
+	.ant-select-selection-wrap {
+		height: 100%;
+	}
+}
+
+[class^="ant-select"] [class^="ant-select"], [class*=" ant-select"] [class^="ant-select"], [class^="ant-select"] [class*=" ant-select"], [class*=" ant-select"] [class*=" ant-select"] {
+	max-height: 150px;
+	overflow-y: auto;
+}
