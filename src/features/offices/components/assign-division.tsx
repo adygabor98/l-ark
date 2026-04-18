@@ -40,6 +40,11 @@ import {
     useOffice
 } from '../../../server/hooks/useOffice';
 import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from '../../../server/hooks/useApolloWithToast';
+import {
     useToast
 } from '../../../shared/hooks/useToast';
 import usePermissions from '../../../shared/hooks/usePermissions';
@@ -66,7 +71,7 @@ const AssignDivision = (props: PropTypes): ReactElement => {
     /** Permissions utilities */
     const { user } = usePermissions();
     /** Definition of the formulary */
-    const { control, handleSubmit, reset, watch } = useForm<any>({
+    const { control, handleSubmit, reset, watch, setError, clearErrors } = useForm<any>({
         mode: 'onChange',
         defaultValues: {
             idOfficeDivision: '',
@@ -102,14 +107,12 @@ const AssignDivision = (props: PropTypes): ReactElement => {
     /** Manage to update/create office-division-user assignment */
     const onSubmit = async (data: any): Promise<void> => {
         setLoading(true);
-        console.log('Division Office updation');
-        console.log(isEdition);
-        console.log(data);
-        console.log(idOffice)
+        
         try {
             if( isEdition ) { // Update existing assignment
                 const response: FetchResult<{ data: ApiResponse }> = await updateOfficeToDivision({ ...data, idOffice: idOffice.toString() });
-                onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
             } else { // Create new assignment
                 const responseUserAssignments: FetchResult<{ data: boolean }> = await checkMultipleOfficeAssignments({ idUser: data.idUser, idOffice: idOffice.toString() });
 
@@ -123,18 +126,20 @@ const AssignDivision = (props: PropTypes): ReactElement => {
 
                     if (confirmed) {
                         const response: FetchResult<{ data: ApiResponse }> = await assignOfficeToDivision({ idUser: data.idUser, idDivision: data.idDivision, idOffice: idOffice.toString() });
-                        onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                        if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                        onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
                     }
                 } else {
                     const response: FetchResult<{ data: ApiResponse }> = await assignOfficeToDivision({ idUser: data.idUser, idDivision: data.idDivision, idOffice: idOffice.toString() });
-                    onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                    if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                    onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
                 }
             }
             setLoading(false);
             reset({ idOfficeDivision: '', idUser: '', idDivision: '', isEnabled: true });
             setOpen(null);
         } catch(e) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
             setLoading(false);
         }
     }
@@ -240,7 +245,7 @@ const AssignDivision = (props: PropTypes): ReactElement => {
                                 <Button variant='secondary' onClick={() => onCancel()}>
                                     { t('buttons.cancel') }
                                 </Button>
-                                <Button variant='primary' onClick={handleSubmit(onSubmit)}>
+                                <Button variant='primary' onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                                     { loading ? t('buttons.saving') : t('buttons.assign') }
                                 </Button>
                             </div>

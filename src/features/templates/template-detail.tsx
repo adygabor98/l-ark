@@ -2,6 +2,7 @@ import {
     useEffect,
     useRef,
     useState,
+    useCallback,
     type ReactElement
 } from 'react';
 import {
@@ -9,7 +10,8 @@ import {
 } from '../../constants';
 import {
     useLocation,
-    useNavigate
+    useNavigate,
+    useBlocker
 } from 'react-router-dom';
 import {
     useForm,
@@ -27,6 +29,11 @@ import { Loader2 } from 'lucide-react';
 import {
     useFileTemplate
 } from '../../server/hooks/useFileTemplate';
+import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from '../../server/hooks/useApolloWithToast';
 import type {
     FetchResult
 } from '@apollo/client';
@@ -50,6 +57,8 @@ const TemplateDetail = (): ReactElement => {
     );
     /** Navigation utilities */
     const navigate = useNavigate();
+    /** Lifted dirty state — builder reports here so the blocker can read it */
+    const [isDirty, setIsDirty] = useState(false);
     /** Formulary definition */
     const methods = useForm<TemplateFormStructure>({
         mode: 'onChange',
@@ -70,6 +79,13 @@ const TemplateDetail = (): ReactElement => {
     /** Track whether initial data has been loaded (needed when jumping straight to builder) */
     const [dataReady, setDataReady] = useState(!state?.id);
 
+    /** Block navigation when the builder has unsaved changes */
+    const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+        isDirty &&
+        step === TemplateCreationSteps.TEMPLATE_BUILDER &&
+        currentLocation.pathname !== nextLocation.pathname
+    );
+
     useEffect(() => {
         if( state?.id ) {
             setDataReady(false);
@@ -78,12 +94,27 @@ const TemplateDetail = (): ReactElement => {
                 if( response.data?.data ) {
                     const { versions, divisions, ...rest } = response.data?.data
 
+                    const rawSections = (versions ?? []).length > 0 ? (versions[0]?.sections ?? []) : [];
+                    const normalizedSections = rawSections.map((s: any) => ({
+                        ...s,
+                        fields: (s.fields ?? []).map((f: any) => {
+                            const columns = (f.columns ?? []).map((col: any, ci: number) => ({
+                                ...col,
+                                id: col.id ?? `col-${f.id ?? 'f'}-${ci}`,
+                            }));
+                            return {
+                                ...f,
+                                options: f.options ?? [],
+                                columns
+                            };
+                        }),
+                    }));
                     methods.reset({
                         title: rest.title,
                         description: rest.description,
                         divisions: (divisions ?? []).map(division => division.divisionId.toString()) as string[],
                         operations: [],
-                        sections: ((versions ?? []).length > 0 ? versions[0]?.sections ?? [] : []) as unknown as TemplateFormSectionStructure[]
+                        sections: normalizedSections as unknown as TemplateFormSectionStructure[]
                     })
                 }
                 setDataReady(true);
@@ -122,7 +153,7 @@ const TemplateDetail = (): ReactElement => {
                         const { __typename, sortOrder, id, ...restField } = field;
                         return {
                             ...restField,
-                            columns: field.type === TemplateComponents.TABLE ? field.columns?.map(({ id: _id, ...col }: any) => col) : field.columns
+                            columns: field.columns
                         }
                     })
                 };
@@ -133,7 +164,7 @@ const TemplateDetail = (): ReactElement => {
     /** Guard to prevent concurrent auto-saves */
     const isSavingRef = useRef(false);
 
-    /** Silent auto-save (update only, no navigation, no toast) */
+    /** Silent auto-save (update only, no navigation, no toast) — debounce-safe */
     const onAutoSave = async (): Promise<void> => {
         if (!state?.id || isSavingRef.current) return;
 
@@ -146,22 +177,37 @@ const TemplateDetail = (): ReactElement => {
         }
     };
 
-    /** Manage to create or update the template */
+    /** Immediate save that bypasses the debounce guard — used before navigation */
+    const onAutoSaveImmediate = async (): Promise<void> => {
+        if (!state?.id) return;
+        const sanitizedData = sanitizeFormData(methods.getValues());
+        await updateFileTemplate({ id: state.id, input: sanitizedData });
+    };
+
+    /** Manage to create or update the template — stays in builder, no redirect */
     const onSubmit = async (_data: any): Promise<void> => {
         const sanitizedData = sanitizeFormData(methods.getValues());
 
         try {
-            if( state.id ) { // Update existing file template
+            if( state?.id ) { // Update existing file template
                 const response: FetchResult<{ data: ApiResponse<number> }> = await updateFileTemplate({ id: state.id, input: sanitizedData });
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
-            } else { // Create a new file template
+                if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, methods.setError);
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data?.success ? 'success' : 'error' });
+                if( response.data?.data?.success ) {
+                    setIsDirty(false);
+                }
+            } else { // Create a new file template — navigate-replace so state gets the new id
                 const response: FetchResult<{ data: ApiResponse<number> }> = await createFileTemplate({ input: sanitizedData });
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, methods.setError);
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data?.success ? 'success' : 'error' });
+                const newId = (response as any)?.data?.data?.entityId;
+                if( newId ) {
+                    setIsDirty(false);
+                    navigate('/templates/builder', { state: { id: newId, step: 'builder' }, replace: true });
+                }
             }
-
-            onBack();
         } catch ( e ) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => methods.setError(field as any, { message }));
         }
     }
 
@@ -169,7 +215,7 @@ const TemplateDetail = (): ReactElement => {
         try {
             const response: FetchResult<{ data: ApiResponse<number> }> = await publishFileTemplate({ id: state.id });
 
-            onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+            onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
             onBack();
         } catch(e) {
             console.error(e);
@@ -190,8 +236,8 @@ const TemplateDetail = (): ReactElement => {
             try {
                 const response: FetchResult<{ data: ApiResponse<number> }> = await deleteLatestVersion({ id: state.id });
 
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
-                if( response.data?.data.success ) { 
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
+                if( response.data?.data.success ) {
                     onBack();
                 }
             } catch(e: any) {
@@ -199,6 +245,40 @@ const TemplateDetail = (): ReactElement => {
             }
         }
     }
+
+    /** Show the unsaved-changes confirmation toast whenever the blocker fires */
+    const handleBlockedNavigation = useCallback(async () => {
+        const { confirmed, secondary } = await onConfirmationToast({
+            title: 'Unsaved Changes',
+            description: 'You have unsaved changes that will be lost if you leave.',
+            actionText: 'Save & Leave',
+            secondaryActionText: 'Discard',
+            cancelText: 'Stay',
+            actionColor: 'success',
+        });
+
+        if (confirmed) {
+            try {
+                await onAutoSaveImmediate();
+                setIsDirty(false);
+                blocker.proceed?.();
+            } catch {
+                onToast({ message: t('messages.error-occurred'), type: 'error' });
+                blocker.reset?.();
+            }
+        } else if (secondary) {
+            setIsDirty(false);
+            blocker.proceed?.();
+        } else {
+            blocker.reset?.();
+        }
+    }, [blocker, onAutoSaveImmediate, onConfirmationToast, onToast, t]);
+
+    useEffect(() => {
+        if (blocker.state === 'blocked') {
+            handleBlockedNavigation();
+        }
+    }, [blocker.state]);
 
     if (step === TemplateCreationSteps.TEMPLATE_BUILDER && !dataReady) {
         return (
@@ -219,10 +299,14 @@ const TemplateDetail = (): ReactElement => {
                 <ReactFlowProvider>
                     <TemplateBuilder
                         id={state.id}
-                        templateVersionId={fileTemplate?.versions?.length > 0 ?fileTemplate?.versions[0].id : null}
+                        templateVersionId={fileTemplate?.versions?.length > 0 ? fileTemplate?.versions[0].id : null}
                         onBack={() => setStep(TemplateCreationSteps.TEMPLATE_FORM)}
                         onSubmit={methods.handleSubmit(onSubmit)}
                         onAutoSave={state?.id ? onAutoSave : undefined}
+                        onAutoSaveImmediate={state?.id ? onAutoSaveImmediate : undefined}
+                        isDirty={isDirty}
+                        onDirtyChange={setIsDirty}
+                        pauseAutoSave={blocker.state === 'blocked'}
                         onPublish={onPublish}
                         onDeleteVersion={onDeleteVersion}
                     />

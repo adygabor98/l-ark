@@ -25,6 +25,11 @@ import {
 import {
     useOffice
 } from '../../../server/hooks/useOffice';
+import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from '../../../server/hooks/useApolloWithToast';
 import type {
     FetchResult
 } from '@apollo/client';
@@ -66,7 +71,7 @@ const AssignUser = (props: PropTypes): ReactElement => {
     /** Permissions utilities */
     const { user } = usePermissions();
     /** Definition of the formulary */
-    const { control, handleSubmit, reset } = useForm<any>({
+    const { control, handleSubmit, reset, setError, clearErrors } = useForm<any>({
         mode: 'onChange',
         defaultValues: {
             idOfficeUser: '',
@@ -103,7 +108,8 @@ const AssignUser = (props: PropTypes): ReactElement => {
         try {
             if( !data.isEnabled ) {
                 const response: FetchResult<{ data: OfficeResponse }> = await updateUserToOffice({ idOfficeUser: data.idOfficeUser, isEnabled: data.isEnabled });
-                onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
             } else {
                 const responseUserAssignments: FetchResult<{ data: boolean }> = await checkMultipleOfficeAssignments({ idUser: data.idUser, idOffice: idOffice.toString() });
 
@@ -118,19 +124,23 @@ const AssignUser = (props: PropTypes): ReactElement => {
                     if (confirmed) {
                         if( isEdition ) { // Update existing assignment
                             const response: FetchResult<{ data: OfficeResponse }> = await updateUserToOffice({ idOfficeUser: data.idOfficeUser, isEnabled: data.isEnabled });
-                            onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                            if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                            onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
                         } else {
                             const response: FetchResult<{ data: OfficeResponse }> = await assignUserToOffice({ idOffice: idOffice.toString(), idUser: data.idUser });
-                            onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                            if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                            onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                         }
                     }
                 } else {
                     if( isEdition ) { // Update existing assignment
                         const response: FetchResult<{ data: OfficeResponse }> = await updateUserToOffice({ idOfficeUser: data.idOfficeUser, isEnabled: data.isEnabled });
-                        onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+                        if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                        onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
                     } else {
                         const response: FetchResult<{ data: OfficeResponse }> = await assignUserToOffice({ idOffice: idOffice.toString(), idUser: data.idUser });
-                        onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                        if( !response.data?.data?.success ) applyResponseErrors(response.data?.data?.errors, setError);
+                        onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                     }
                 }
             }
@@ -139,7 +149,7 @@ const AssignUser = (props: PropTypes): ReactElement => {
             setOpen(null);
 
         } catch(e) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
             setLoading(false);
         }
     }
@@ -242,7 +252,7 @@ const AssignUser = (props: PropTypes): ReactElement => {
                                 <Button variant='secondary' onClick={( )=> onCancel()}>
                                     { t('buttons.cancel') }
                                 </Button>
-                                <Button variant='primary' onClick={handleSubmit(onSubmit)}>
+                                <Button variant='primary' onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                                     { loading ? t('buttons.saving') : t('buttons.assign') }
                                 </Button>
                             </div>

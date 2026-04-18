@@ -50,6 +50,11 @@ import {
 import {
 	useDivision
 } from "../../server/hooks/useDivision";
+import {
+	extractFieldErrors,
+	applyResponseErrors,
+	getResponseMessage
+} from "../../server/hooks/useApolloWithToast";
 import Field from "../../shared/components/field";
 import Button from "../../shared/components/button";
 import OperatingLocations from "./components/operating-locations";
@@ -62,7 +67,7 @@ const DivisionDetail = (): ReactElement => {
 	/** Toast utilities */
 	const { onToast, onConfirmationToast } = useToast();
 	/** Definition of the formulary */
-    const { control, handleSubmit, reset } = useForm({
+    const { control, handleSubmit, reset, setError, clearErrors } = useForm({
         mode: 'onChange',
         defaultValues: {
            name: '',
@@ -108,19 +113,24 @@ const DivisionDetail = (): ReactElement => {
 				if( response?.data?.data?.success ) {
 					const { offices, roles, ...division } = response.data.data.data as DivisionDetailType;
 					reset({ ...division, roles: roles.map((roleDivision: DivisionRole) => roleDivision.roleId.toString()) });
+				} else {
+					applyResponseErrors(response.data?.data?.errors, setError);
 				}
-				onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
 				setLoading(false);
 			} else { // Add new division
 				const response: FetchResult<{ data: ApiResponse }> = await createDivision({ input: {...form } });
-				onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+				if( !response.data?.data?.success ) {
+					applyResponseErrors(response.data?.data?.errors, setError);
+				}
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
 				setLoading(false);
 				if( response.data?.data.success ) {
                     onBack();
                 }
 			}
 		} catch(e) {
-			console.error(e);
+			extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
 			setLoading(false);
 		}
 	}
@@ -144,7 +154,7 @@ const DivisionDetail = (): ReactElement => {
 					const { offices, roles, ...division } = response.data.data.data as DivisionDetailType;
 					reset({ ...division, roles: roles.map((roleDivision: DivisionRole) => roleDivision.roleId.toString()) });
 				}
-				onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
 				setLoading(false);
 			} catch(e: any) {
 				onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -170,7 +180,7 @@ const DivisionDetail = (): ReactElement => {
 					const { offices, roles, ...division } = response.data.data.data as DivisionDetailType;
 					reset({ ...division, roles: roles.map((roleDivision: DivisionRole) => roleDivision.roleId.toString()) });
 				}
-				onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
 				setLoading(false);
 			} catch(e: any) {
 				onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -224,7 +234,7 @@ const DivisionDetail = (): ReactElement => {
                             	{ division.status === Status.ACTIVE ? t('buttons.deactivate') : t('buttons.activate') }
                         	</Button>
 						}
-                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText="Saving..." onClick={handleSubmit(onSubmit)}>
+                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText="Saving..." onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                             {t('common.save-changes')}
                         </Button>
                     </div>

@@ -126,6 +126,31 @@
 	--sidebar-accent-foreground: 45 100% 50%;
 	--sidebar-border: 220 13% 91%;
 	--sidebar-ring: 45 100% 50%;
+
+	/* Status semantic colors */
+	--status-success: 152 69% 40%;
+	--status-success-bg: 152 69% 97%;
+	--status-success-border: 152 69% 80%;
+
+	--status-warning: 45 100% 50%;
+	--status-warning-bg: 45 100% 97%;
+	--status-warning-border: 45 100% 75%;
+
+	--status-error: 0 84% 60%;
+	--status-error-bg: 0 84% 97%;
+	--status-error-border: 0 84% 80%;
+
+	--status-info: 212 100% 48%;
+	--status-info-bg: 212 100% 97%;
+	--status-info-border: 212 100% 80%;
+
+	--status-skipped: 220 9% 65%;
+	--status-skipped-bg: 220 9% 97%;
+	--status-skipped-border: 220 9% 82%;
+
+	--status-global: 263 70% 67%;
+	--status-global-bg: 263 70% 97%;
+	--status-global-border: 263 70% 82%;
 }
 
 /* Override Sileo action state color to project primary amber */
@@ -243,6 +268,16 @@ html, body, #root {
 	white-space: nowrap !important;
 }
 
+.rc-virtual-list-holder {
+	max-height: 150px !important;
+	overflow-y: auto !important;
+	scrollbar-width: thin !important;
+}
+
+.ant-select-dropdown .rc-virtual-list-scrollbar {
+	display: none !important;
+}
+
 /* Tiptap editor content styles — applies to editor and canvas preview */
 .ProseMirror h2,
 .rich-text h2 {
@@ -279,4 +314,115 @@ html, body, #root {
 .ProseMirror li,
 .rich-text li {
 	margin: 0.15rem 0;
+}
+
+/* ─── Export-layout field token line stretching ────────────────────────────
+ * Any block-level element that directly contains a field-token preview span
+ * becomes a flex row so the token's `flex: 1 1 auto` actually fills the
+ * remainder of the line. Without this, single-field paragraphs collapse to
+ * the token's `min-width` (~60px). Using `:has()` lets the rule scope itself
+ * to the few paragraphs that actually need it.
+ */
+.export-rich-content p:has([data-field-preview]),
+.export-rich-content h1:has([data-field-preview]),
+.export-rich-content h2:has([data-field-preview]),
+.export-rich-content h3:has([data-field-preview]),
+.export-rich-content h4:has([data-field-preview]),
+.ProseMirror p:has([data-field-preview]),
+.ProseMirror h1:has([data-field-preview]),
+.ProseMirror h2:has([data-field-preview]),
+.ProseMirror h3:has([data-field-preview]),
+.ProseMirror h4:has([data-field-preview]),
+.rich-text p:has([data-field-preview]),
+.rich-text h1:has([data-field-preview]),
+.rich-text h2:has([data-field-preview]),
+.rich-text h3:has([data-field-preview]),
+.rich-text h4:has([data-field-preview]) {
+	display: flex;
+	align-items: baseline;
+	flex-wrap: wrap;
+	gap: 0 4px;
+}
+
+/* When a field token carries marks (e.g. textStyle/fontSize), ProseMirror
+ * wraps it in a mark <span>. That wrapper breaks the flex parent chain so
+ * `flex: 1 1 auto` on the token has no effect. `display: contents` makes the
+ * wrapper transparent to layout, letting the token become a direct flex
+ * child of the paragraph again. */
+.export-rich-content p:has([data-field-preview]) span:has(> [data-field-preview]),
+.export-rich-content h1:has([data-field-preview]) span:has(> [data-field-preview]),
+.export-rich-content h2:has([data-field-preview]) span:has(> [data-field-preview]),
+.export-rich-content h3:has([data-field-preview]) span:has(> [data-field-preview]),
+.export-rich-content h4:has([data-field-preview]) span:has(> [data-field-preview]),
+.ProseMirror p:has([data-field-preview]) span:has(> [data-field-preview]),
+.ProseMirror h1:has([data-field-preview]) span:has(> [data-field-preview]),
+.ProseMirror h2:has([data-field-preview]) span:has(> [data-field-preview]),
+.ProseMirror h3:has([data-field-preview]) span:has(> [data-field-preview]),
+.ProseMirror h4:has([data-field-preview]) span:has(> [data-field-preview]),
+.rich-text p:has([data-field-preview]) span:has(> [data-field-preview]),
+.rich-text h1:has([data-field-preview]) span:has(> [data-field-preview]),
+.rich-text h2:has([data-field-preview]) span:has(> [data-field-preview]),
+.rich-text h3:has([data-field-preview]) span:has(> [data-field-preview]),
+.rich-text h4:has([data-field-preview]) span:has(> [data-field-preview]) {
+	display: contents;
+}
+
+/* Also flatten any deeper ancestor span chain (multiple stacked marks
+ * create nested wrapper spans). Matches any span that contains a field
+ * token at any depth, inside a paragraph that has one. */
+.export-rich-content p:has([data-field-preview]) span:has([data-field-preview]),
+.export-rich-content h1:has([data-field-preview]) span:has([data-field-preview]),
+.export-rich-content h2:has([data-field-preview]) span:has([data-field-preview]),
+.export-rich-content h3:has([data-field-preview]) span:has([data-field-preview]),
+.export-rich-content h4:has([data-field-preview]) span:has([data-field-preview]),
+.ProseMirror p:has([data-field-preview]) span:has([data-field-preview]),
+.ProseMirror h1:has([data-field-preview]) span:has([data-field-preview]),
+.ProseMirror h2:has([data-field-preview]) span:has([data-field-preview]),
+.ProseMirror h3:has([data-field-preview]) span:has([data-field-preview]),
+.ProseMirror h4:has([data-field-preview]) span:has([data-field-preview]),
+.rich-text p:has([data-field-preview]) span:has([data-field-preview]),
+.rich-text h1:has([data-field-preview]) span:has([data-field-preview]),
+.rich-text h2:has([data-field-preview]) span:has([data-field-preview]),
+.rich-text h3:has([data-field-preview]) span:has([data-field-preview]),
+.rich-text h4:has([data-field-preview]) span:has([data-field-preview]) {
+	display: contents;
+}
+
+/* ── Non-left-aligned paragraphs with tokens ────────────────────────────────
+ * When a paragraph is right- or center-aligned, converting it to a flex row
+ * makes `text-align` irrelevant for flex items. We need to:
+ *   1. Sync `justify-content` with the intended alignment.
+ *   2. Give tokens a fixed width instead of `flex: 1 1 auto` (which would
+ *      fill the entire remaining space and look wrong on non-left paragraphs).
+ * `!important` is required because `flex: 1 1 auto` is set as an inline style
+ * in renderHTML and CSS rules cannot override inline styles otherwise.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+.export-rich-content p[style*="text-align: right"]:has([data-field-preview]),
+.ProseMirror p[style*="text-align: right"]:has([data-field-preview]),
+.rich-text p[style*="text-align: right"]:has([data-field-preview]) {
+	justify-content: flex-end;
+}
+
+.export-rich-content p[style*="text-align: center"]:has([data-field-preview]),
+.ProseMirror p[style*="text-align: center"]:has([data-field-preview]),
+.rich-text p[style*="text-align: center"]:has([data-field-preview]) {
+	justify-content: center;
+}
+
+/* Fixed-width token for right / center / justify aligned paragraphs.
+ * Excludes group/block types (CHECKBOX, RADIO_GROUP, BOOLEAN, SELECT, ADDRESS,
+ * DESCRIPTION, TEXTAREA) which must keep their natural/auto width so that their
+ * options render inline rather than wrapping into a single narrow column. */
+.export-rich-content p[style*="text-align: right"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.export-rich-content p[style*="text-align: center"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.export-rich-content p[style*="text-align: justify"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.ProseMirror p[style*="text-align: right"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.ProseMirror p[style*="text-align: center"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.ProseMirror p[style*="text-align: justify"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.rich-text p[style*="text-align: right"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.rich-text p[style*="text-align: center"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]),
+.rich-text p[style*="text-align: justify"]:has([data-field-preview]) [data-field-preview]:not([data-field-preview="CHECKBOX"]):not([data-field-preview="RADIO_GROUP"]):not([data-field-preview="BOOLEAN"]):not([data-field-preview="SELECT"]):not([data-field-preview="ADDRESS"]):not([data-field-preview="DESCRIPTION"]):not([data-field-preview="TEXTAREA"]) {
+	flex: 0 0 auto !important;
+	width: 140px;
 }

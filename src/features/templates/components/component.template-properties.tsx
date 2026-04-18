@@ -1,5 +1,7 @@
 import {
-    type ReactElement
+    type ReactElement,
+    useRef,
+    useState
 } from 'react';
 import {
     useFormContext,
@@ -54,6 +56,7 @@ const ComponentTemplateProperties = (props: PropTypes): ReactElement => {
     /** Watch reactive data for conditional rendering */
     const watchedOptions: OptionItem[] = useWatch({ control, name: `${fieldPath}.options` }) ?? [];
     const watchedColumns: any[] = useWatch({ control, name: `${fieldPath}.columns` }) ?? [];
+    const watchedRequiredDocuments: string[] = useWatch({ control, name: `${fieldPath}.requiredDocuments` }) ?? [];
     const watchedPlaceholder = useWatch({ control, name: `${fieldPath}.placeholder` });
     const watchedWidth = useWatch({ control, name: `${fieldPath}.width` });
 
@@ -70,6 +73,25 @@ const ComponentTemplateProperties = (props: PropTypes): ReactElement => {
     const removeOption = (idx: number): void => {
         const current = getValues(`${fieldPath}.options`) || [];
         setValue(`${fieldPath}.options`, current.filter((_: any, i: number) => i !== idx));
+    };
+
+    /** Required documents input state */
+    const [newDocName, setNewDocName] = useState('');
+    const docInputRef = useRef<HTMLInputElement>(null);
+
+    /** Manage required documents list */
+    const addRequiredDocument = (): void => {
+        const name = newDocName.trim();
+        if (!name) return;
+        const current: string[] = getValues(`${fieldPath}.requiredDocuments`) || [];
+        setValue(`${fieldPath}.requiredDocuments`, [...current, name]);
+        setNewDocName('');
+        docInputRef.current?.focus();
+    };
+
+    const removeRequiredDocument = (idx: number): void => {
+        const current: string[] = getValues(`${fieldPath}.requiredDocuments`) || [];
+        setValue(`${fieldPath}.requiredDocuments`, current.filter((_: string, i: number) => i !== idx));
     };
 
     /** Manage to add a new column */
@@ -320,6 +342,63 @@ const ComponentTemplateProperties = (props: PropTypes): ReactElement => {
                                     >
                                         <Plus className="w-4 h-4" /> Add Column
                                     </button>
+                                </div>
+                            </div>
+                        }
+                        
+                        {/* Required Documents list for FILE type */}
+                        { selectedField.type === TemplateComponents.FILE &&
+                            <div className="space-y-4 border-t border-black/8 pt-6">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Required Documents </label>
+                                    { watchedRequiredDocuments.length > 0 &&
+                                        <span className="text-xs font-[Lato-Regular] bg-black/4 text-black/60 px-2 py-0.5 rounded-md">
+                                            { watchedRequiredDocuments.length }
+                                        </span>
+                                    }
+                                </div>
+                                <p className="text-[11px] font-[Lato-Regular] text-black/40 -mt-2"> List of documents the user must upload. </p>
+
+                                <div className="space-y-2">
+                                    <AnimatePresence initial={false}>
+                                        { watchedRequiredDocuments.map((docName: string, idx: number) => (
+                                            <motion.div
+                                                key={idx}
+                                                initial={{ opacity: 0, height: 0 }}
+                                                animate={{ opacity: 1, height: 'auto' }}
+                                                exit={{ opacity: 0, height: 0 }}
+                                                className="flex items-center gap-2 px-3 py-2 bg-[#F8F9FA] border border-black/8 rounded-xl group"
+                                            >
+                                                <span className="w-5 h-5 shrink-0 rounded-md border border-black/10 bg-white flex items-center justify-center text-[10px] text-black/30 font-[Lato-Bold]">
+                                                    { idx + 1 }
+                                                </span>
+                                                <span className="text-sm font-[Lato-Regular] text-black/70 flex-1 truncate">{ docName }</span>
+                                                <button
+                                                    className="text-black/20 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                                    onClick={() => removeRequiredDocument(idx)}
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
+
+                                    <div className="flex gap-2">
+                                        <input
+                                            ref={docInputRef}
+                                            value={newDocName}
+                                            onChange={(e) => setNewDocName(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRequiredDocument())}
+                                            placeholder="Document name…"
+                                            className="flex-1 h-9 px-3 text-sm border-[0.5px] border-black/15 rounded-lg bg-white shadow-sm focus:outline-none focus:border-[#FFBF00]/50 font-[Lato-Regular] placeholder:text-black/25"
+                                        />
+                                        <button
+                                            onClick={addRequiredDocument}
+                                            className="h-9 px-3 rounded-lg border border-dashed border-black/15 text-sm font-[Lato-Regular] text-black/50 hover:text-black hover:bg-black/2 transition-colors flex items-center gap-1"
+                                        >
+                                            <Plus className="w-3.5 h-3.5" /> Add
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         }

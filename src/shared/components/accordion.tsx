@@ -16,8 +16,8 @@ const AccordionItem = React.forwardRef<React.ElementRef<typeof AccordionPrimitiv
 
 AccordionItem.displayName = "AccordionItem"
 
-const AccordionTrigger = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Trigger>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger>>(({ className, children, ...props }, ref) => (
-	<AccordionPrimitive.Header className="flex">
+const AccordionTrigger = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Trigger>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Trigger> & { headerClassName?: string }>(({ className, headerClassName, children, ...props }, ref) => (
+	<AccordionPrimitive.Header className={`flex ${headerClassName ?? ''}`}>
 		<AccordionPrimitive.Trigger
 			ref={ref}
 			className={`flex flex-1 items-center justify-between py-4 text-sm font-medium transition-all hover:underline text-left [&[data-state=open]>svg]:rotate-180 ${className}`}
@@ -34,7 +34,7 @@ AccordionTrigger.displayName = AccordionPrimitive.Trigger.displayName
 const AccordionContent = React.forwardRef<React.ElementRef<typeof AccordionPrimitive.Content>, React.ComponentPropsWithoutRef<typeof AccordionPrimitive.Content>>(({ className, children, ...props }, ref) => (
 		<AccordionPrimitive.Content
 			ref={ref}
-			className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down"
+			className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down data-[state=open]:overflow-visible"
 			{...props}
 		>
 			<div className={`pb-4 pt-0 ${className}`}>{children}</div>

@@ -45,6 +45,7 @@ export const FILE_TEMPLATE_DETAIL = gql`
             templateId
             versionNumber
             isLatest
+            status
 
             sections {
                 id
@@ -100,10 +101,11 @@ export const API_FILE_TEMPLATE_RESPONSE = gql`
 `;
 
 export const API_FILE_TEMPLATE_GENERIC_RESPONSE = gql`
-    
+
     fragment FileTemplateApiGenericResponse on ApiResponse {
         success
         message
+        entityId
         errors {
             field
             message
@@ -128,6 +130,53 @@ export const EXPORT_LAYOUT_API_RESPONSE = gql`
         errors {
             field
             message
+        }
+    }
+`;
+
+export const FORM_INSTANCE_DETAIL = gql`
+    fragment FormInstanceDetail on FormInstance {
+        id
+        templateVersionId
+        status
+        submittedById
+        submittedBy {
+            id
+            firstName
+            lastName
+        }
+        createdAt
+        updatedAt
+        submittedAt
+        templateVersion {
+            id
+            templateId
+            versionNumber
+            sections {
+                id
+                title
+                description
+                sortOrder
+                fields {
+                    id
+                    type
+                    label
+                    required
+                    sortOrder
+                    placeholder
+                    helpText
+                    width
+                    format
+                    multiple
+                    options
+                    columns
+                }
+            }
+        }
+        fieldValues {
+            id
+            fieldId
+            value
         }
     }
 `;

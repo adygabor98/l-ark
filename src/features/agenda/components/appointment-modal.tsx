@@ -138,7 +138,7 @@ export const AppointmentModal: React.FC = () => {
         </DialogHeader>
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={(e) => { clearErrors(); handleSubmit(onSubmit)(e); }}
           className="flex flex-col gap-4 mt-2"
         >
           {/* Name */}

@@ -55,17 +55,27 @@ interface PropTypes {
     onBack: () => void;
     onSubmit: () => void;
     onAutoSave?: () => Promise<void>;
+    /** Immediate (non-debounced) save — called before navigating to Export Layout */
+    onAutoSaveImmediate?: () => Promise<void>;
+    /** Dirty state owned by the parent — drives the circle indicator and nav blocker */
+    isDirty: boolean;
+    /** Notifies the parent whenever the dirty state changes */
+    onDirtyChange?: (dirty: boolean) => void;
+    /** When true, cancels any pending auto-save timer and blocks new ones (e.g. while nav confirmation is shown) */
+    pauseAutoSave?: boolean;
     onPublish: () => void;
     onDeleteVersion: () => void;
 }
 
 const TemplateBuilder = (props: PropTypes): ReactElement => {
     /** Retrieve component properties */
-    const { id, templateVersionId, onBack, onSubmit, onAutoSave, onPublish, onDeleteVersion } = props;
+    const { id, templateVersionId, onBack, onSubmit, onAutoSave, onAutoSaveImmediate, isDirty, onDirtyChange, pauseAutoSave, onPublish, onDeleteVersion } = props;
+    /** Track whether we're doing a save-before-navigate to Export Layout */
+    const [isNavSaving, setIsNavSaving] = useState(false);
     /** Navigation utilities */
     const navigate = useNavigate();
     /** Get form methods from context (provided by FormProvider in template-detail) */
-    const { control, getValues, setValue } = useFormContext();
+    const { control, getValues, setValue, clearErrors } = useFormContext();
     /** useFieldArray for structural section operations (append/remove) */
     const { append, remove } = useFieldArray({ control, name: 'sections', keyName: '_rhfId' });
     /** Live reactive sections */
@@ -78,10 +88,9 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
     const [selectedFieldId, setSelectedFieldId] = useState<string | null>("f1");
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [propertiesCollapsed, setPropertiesCollapsed] = useState(false);
-    const { onConfirmationToast } = useToast();
+    const { onConfirmationToast, onToast } = useToast();
     /** Auto-save state */
     const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-    const [isDirty, setIsDirty] = useState(false);
     const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Track previous form snapshot so we only mark dirty on real content changes
      *  (survives React StrictMode double-effect and useWatch reference changes) */
@@ -108,6 +117,11 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
         }
     }, [sections]);
 
+    /** Notify parent of dirty state changes */
+    const markDirty = useCallback((dirty: boolean) => {
+        onDirtyChange?.(dirty);
+    }, [onDirtyChange]);
+
     /** Auto-save: debounce 3s after any form change (only when editing existing template) */
     const handleAutoSave = useCallback(async () => {
         if (!onAutoSave) return;
@@ -115,11 +129,19 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
         try {
             await onAutoSave();
             setSaveStatus('saved');
-            setIsDirty(false);
+            markDirty(false);
         } catch {
             setSaveStatus('error');
         }
-    }, [onAutoSave]);
+    }, [onAutoSave, markDirty]);
+
+    /** Cancel any pending auto-save immediately when navigation confirmation is shown */
+    useEffect(() => {
+        if (pauseAutoSave && autoSaveTimerRef.current) {
+            clearTimeout(autoSaveTimerRef.current);
+            autoSaveTimerRef.current = null;
+        }
+    }, [pauseAutoSave]);
 
     useEffect(() => {
         const snapshot = JSON.stringify([sections, watchedTitle, watchedDescription]);
@@ -133,8 +155,8 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
         if (prevSnapshotRef.current === snapshot) return; // same content, skip
         prevSnapshotRef.current = snapshot;
 
-        setIsDirty(true);
-        if (!onAutoSave) return;
+        markDirty(true);
+        if (!onAutoSave || pauseAutoSave) return;
 
         if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
         autoSaveTimerRef.current = setTimeout(handleAutoSave, 3000);
@@ -200,6 +222,7 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
             required: false,
             options: isChoiceType ? [{ value: 'option-1', label: 'Option 1', isDefault: false }] : [],
             columns: [],
+            requiredDocuments: [],
             format: 'HTML',
             width: 'FULL',
             multiple: false
@@ -283,10 +306,28 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
                                     <Eye className="w-4 h-4" /> Preview
                                 </DropdownMenuItem>
                                 { id && templateVersionId &&
-                                    <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2" onClick={() => {
-                                        navigate(`/templates/export-layout/${id}/${templateVersionId}`);
+                                    <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2" disabled={isNavSaving} onClick={async () => {
+                                        if (isDirty && onAutoSaveImmediate) {
+                                            setIsNavSaving(true);
+                                            onToast({ message: 'Saving changes before opening Export Layout...', type: 'info' });
+                                            try {
+                                                await onAutoSaveImmediate();
+                                                markDirty(false);
+                                                navigate(`/templates/export-layout/${id}/${templateVersionId}`);
+                                            } catch {
+                                                onToast({ message: 'Failed to save changes. Please try again.', type: 'error' });
+                                            } finally {
+                                                setIsNavSaving(false);
+                                            }
+                                        } else {
+                                            navigate(`/templates/export-layout/${id}/${templateVersionId}`);
+                                        }
                                     }}>
-                                        <Layout className="w-4 h-4" /> Export Layout
+                                        { isNavSaving
+                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                            : <Layout className="w-4 h-4" />
+                                        }
+                                        Export Layout
                                     </DropdownMenuItem>
                                 }
                             </DropdownMenuContent>
@@ -312,7 +353,7 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
 
                     {/* ── Group 3: Save Draft split button (rightmost = safe default) ── */}
                     <div className="flex items-center">
-                        <Button variant="secondary" onClick={() => { onSubmit(); setIsDirty(false); }} className="rounded-r-none border-r-0">
+                        <Button variant="secondary" onClick={() => { clearErrors(); onSubmit(); }} className="rounded-r-none border-r-0">
                             <Save className="w-4 h-4" />
                             <span className="flex items-center gap-1.5">
                                 Save Draft
@@ -326,7 +367,7 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                                <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2" onClick={() => { onSubmit(); setIsDirty(false); }}>
+                                <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2" onClick={() => { clearErrors(); onSubmit(); }}>
                                     <Save className="w-4 h-4" /> Save Draft
                                 </DropdownMenuItem>
                                 { id && <>

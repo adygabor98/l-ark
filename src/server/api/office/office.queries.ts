@@ -23,6 +23,18 @@ export const RETRIEVE_OFFICES = gql`
     }
 `;
 
+export const RETRIEVE_OFFICES_BY_USER = gql`
+    ${OFFICE_CORE_FIELDS}
+    ${OFFICE_USERS_FIELDS}
+
+    query gqlRetrieveOfficesByUser {
+        data: gqlRetrieveOfficesByUser {
+            ...OfficeBasicFields
+            ...OfficeUsersFields
+        }
+    }
+`;
+
 export const RETRIEVE_OFFICE_BY_ID = gql`
     ${OFFICE_CORE_FIELDS}
     ${OFFICE_USERS_FIELDS}

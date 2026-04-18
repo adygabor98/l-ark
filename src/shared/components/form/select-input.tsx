@@ -10,10 +10,26 @@ import {
 import {
     Select
 } from "antd";
-import { RETRIEVE_ALL_ROLES } from "../../../server/api/roles/role";
-import { RETRIEVE_OFFICES } from "../../../server/api/office";
-import { RETRIEVE_USERS } from "../../../server/api/users/user";
-import { RETRIEVE_DIVISIONS } from "../../../server/api/division";
+import {
+    RETRIEVE_ALL_ROLES
+} from "../../../server/api/roles/role";
+import {
+    RETRIEVE_OFFICES
+} from "../../../server/api/office";
+import {
+    RETRIEVE_USERS
+} from "../../../server/api/users/user";
+import {
+    RETRIEVE_DIVISIONS
+} from "../../../server/api/division";
+import {
+    RETRIEVE_FILE_TEMPLATES
+} from "../../../server/api/template/file-template";
+import { RETRIEVE_BLUEPRINTS } from "../../../server/api/operation/operation.queries";
+import {
+    ConditionalVisibility,
+    StepType
+} from '@l-ark/types';
 
 const { Option } = Select;
 
@@ -30,7 +46,7 @@ interface PropTypes {
 }
 
 interface Element {
-    value: string;
+    value: string | null;
     label: string;
 }
 
@@ -41,6 +57,8 @@ const getRequestQuery = (type: string | undefined): DocumentNode => {
         case 'users': return RETRIEVE_USERS;
         case 'offices': return RETRIEVE_OFFICES;
         case 'divisions': return RETRIEVE_DIVISIONS;
+        case 'file-templates': return RETRIEVE_FILE_TEMPLATES;
+        case 'blueprints': return RETRIEVE_BLUEPRINTS;
         default: return gql`query empty { __emtpy }`
     }
 }
@@ -58,9 +76,9 @@ const SelectInput = (props: PropTypes) => {
             const response = await retrieveElements({ variables: params ?? {} });
 
             if( response?.data?.data ) {
-                const loadedElements = response.data.data.map((element: { id: number, firstName: string, lastName: string, name: string }) => ({
+                const loadedElements = response.data.data.map((element: { id: number, firstName: string, lastName: string, name: string, title: string }) => ({
                     value: element.id.toString(),
-                    label: element.name || `${element.firstName} ${element.lastName}`
+                    label: ['file-templates', 'blueprints'].includes(type ?? '') ? element.title : element.name || `${element.firstName} ${element.lastName}`
                 }));
                 setElements(loadedElements);
 
@@ -70,7 +88,23 @@ const SelectInput = (props: PropTypes) => {
                 }
             }
         }
-        initialize();
+        if( type === 'blueprint-step-types' ) {
+            setElements([
+                { value: StepType.STANDARD, label: 'Standard' },
+                { value: StepType.NOTIFICATION, label: 'Notification' },
+                { value: StepType.OPEN_OPERATION, label: 'Open Operation' },
+                { value: StepType.WAIT_FOR_LINKED, label: 'Wait for Opened Operation' },
+                { value: StepType.CLOSURE, label: 'Closure' },
+            ])
+        } else if( type === 'blueprint-conditional-visibility') {
+            setElements([
+                { value: 'always', label: 'Always' },
+                { value: ConditionalVisibility.LINKED_ONLY, label: 'Only when launched by another operation' },
+                { value: ConditionalVisibility.STANDALONE_ONLY, label: ' Only when opened standalone' }
+            ]);
+        } else {
+            initialize();
+        }
     }, [type, params]);
     
     return (
@@ -81,11 +115,18 @@ const SelectInput = (props: PropTypes) => {
                     ? (field.value?.length ? field.value : undefined)
                     : (field.value && elements.some(el => el.value === field.value) ? field.value : undefined)
                 }
-                style={{ width: '100%', minHeight: '40px', border: 'none', fontSize: 16, backgroundColor: 'transparent!important' }}
+                style={{ width: '100%', minHeight: '40px', border: 'none', fontSize: 16, backgroundColor: 'transparent!important', paddingInlineStart: '12px' }}
                 placeholder={placeholder}
                 mode={multiple ? "multiple" : undefined}
                 disabled={disabled}
                 showSearch={false}
+                maxTagCount={1}
+                virtual={false}
+                tagRender={(tagProps) => (
+                    <span style={{ maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block', verticalAlign: 'middle' }}>
+                        {tagProps.label}
+                    </span>
+                )}
                 getPopupContainer={(trigger) => trigger.parentElement || document.body}
                 onChange={(value) => {
                     field.onChange(value);
@@ -95,7 +136,7 @@ const SelectInput = (props: PropTypes) => {
                     }
                 }}
             >
-                { elements.map((element: Element) => <Option key={element.value} value={element.value} disabled={disableIds?.includes(element.value)}> { element.label } </Option> ) }
+                { elements.map((element: Element) => <Option key={element.value} value={element.value} disabled={disableIds?.includes(element.value ?? '')}> { element.label } </Option> ) }
             </Select>
         </div>
     );

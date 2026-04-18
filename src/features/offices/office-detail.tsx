@@ -47,6 +47,11 @@ import {
     useOffice
 } from "../../server/hooks/useOffice";
 import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from "../../server/hooks/useApolloWithToast";
+import {
     format
 } from "date-fns";
 import {
@@ -66,7 +71,7 @@ const OfficeDetail = (): ReactElement => {
     /** URL parameters utilities */
     const params = useParams();
     /** Formulary definition */
-    const { control, handleSubmit, reset } = useForm({
+    const { control, handleSubmit, reset, setError, clearErrors } = useForm({
         mode: 'onChange',
         defaultValues: {
            name: '',
@@ -118,19 +123,24 @@ const OfficeDetail = (): ReactElement => {
                 if( response?.data?.data?.success ) {
                     const { users, divisions, ...office } = response.data.data.data as OfficeDetailType;
                     reset({ ...office });
+                } else {
+                    applyResponseErrors(response.data?.data?.errors, setError);
                 }
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } else { // Add new office
                 const response: FetchResult<{ data: ApiResponse }> = await createOffice({ input: {...form } });
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                if( !response.data?.data?.success ) {
+                    applyResponseErrors(response.data?.data?.errors, setError);
+                }
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
                 if( response.data?.data.success ) {
                     onBack();
                 }
             }
         } catch(e) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
             setLoading(false);
         }
     }
@@ -154,7 +164,7 @@ const OfficeDetail = (): ReactElement => {
                     reset({ ...office });
                 }
 
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } catch(e: any) {
                 onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -180,7 +190,7 @@ const OfficeDetail = (): ReactElement => {
                     const { users, divisions, ...office } = response.data.data.data as OfficeDetailType;
                     reset({ ...office });
                 }
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } catch(e: any) {
                 onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -236,7 +246,7 @@ const OfficeDetail = (): ReactElement => {
                                 { office.status === Status.ACTIVE ? t('buttons.deactivate') : t('buttons.activate') }
                             </Button>
                         }
-                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText="Saving..." onClick={handleSubmit(onSubmit)}>
+                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText="Saving..." onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                             {t('common.save-changes')}
                         </Button>
                     </div>

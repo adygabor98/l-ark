@@ -48,6 +48,11 @@ import {
 import {
     useUser
 } from "../../server/hooks/useUser";
+import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from "../../server/hooks/useApolloWithToast";
 import type {
     FetchResult
 } from "@apollo/client";
@@ -74,7 +79,7 @@ const UserDetail = (): ReactElement => {
     /** Toast api utilities */
     const { onToast, onConfirmationToast } = useToast();
     /** Formulary definition */
-    const { control, handleSubmit, reset } = useForm<any>({
+    const { control, handleSubmit, reset, setError, clearErrors } = useForm<any>({
         mode: 'onChange',
         defaultValues: {
             firstName: '',
@@ -129,19 +134,24 @@ const UserDetail = (): ReactElement => {
                 if( response?.data?.data?.success ) {
                     const { role, managedDivisions, offices, ...user } = response.data.data.data as UserDetailType;
                     reset({ ...user, roleId: role.id.toString() });
+                } else {
+                    applyResponseErrors(response.data?.data?.errors, setError);
                 }
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } else { // Add new user
                 const response: FetchResult<{ data: ApiResponse<UserDetailType> }> = await createUser({ input: {...form } });
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                if( !response.data?.data?.success ) {
+                    applyResponseErrors(response.data?.data?.errors, setError);
+                }
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
                 if( response.data?.data.success ) {
                     onBack();
                 }
             }
         } catch(e) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
             setLoading(false);
         }
     }
@@ -165,7 +175,7 @@ const UserDetail = (): ReactElement => {
                     const { role, managedDivisions, offices, ...user } = response.data.data.data as UserDetailType;
                     reset({ ...user, roleId: role.id.toString() });
                 }
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } catch(e: any) {
                 onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -191,7 +201,7 @@ const UserDetail = (): ReactElement => {
                     const { role, managedDivisions, offices, ...user } = response.data.data.data as UserDetailType;
                     reset({ ...user, roleId: role.id.toString() });
                 }
-                onToast({ message: response.data?.data?.message ?? '', type: response.data?.data.success ? 'success' : 'error' } );
+                onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' } );
                 setLoading(false);
             } catch(e: any) {
                 onToast({ message: e?.message ?? t('messages.error-occurred'), type: 'error' });
@@ -253,7 +263,7 @@ const UserDetail = (): ReactElement => {
                                 { user.status === UserStatus.ACTIVE ? t('buttons.deactivate') : t('buttons.activate') }
                             </Button>
                         }
-                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText="Saving..." onClick={handleSubmit(onSubmit)}>
+                        <Button variant="primary" loading={loading === LoadingStates.SAVE} loadingText={ t('buttons.saving') } onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                             {t('common.save-profile')}
                         </Button>
                     </div>

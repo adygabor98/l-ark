@@ -4,7 +4,6 @@ import {
     type SetStateAction
 } from 'react';
 import {
-    BellDot,
     Menu
 } from 'lucide-react';
 import {
@@ -13,6 +12,7 @@ import {
 import type {
     NavItem
 } from '../models/nav.model';
+import NotificationsPopover from './notifications-popover';
 
 interface PropTypes {
     children: ReactElement;
@@ -46,8 +46,7 @@ const Content = ({ children, navItems, setIsMobileMenuOpen }: PropTypes): ReactE
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/*<NotificationsPopover />*/}
-                    <BellDot className='w-5 h-5' />
+                    <NotificationsPopover />
                 </div>
             </header>
 

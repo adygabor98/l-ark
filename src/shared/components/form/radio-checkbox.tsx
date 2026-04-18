@@ -18,7 +18,7 @@ const RadioCheckbox = (props: PropTypes) => {
         <div className='flex justify-center items-center' onClick={() => handleChange(!field.value)}>
             <div
                 className={`
-                    shrink-0 flex-1 min-w-40 max-w-[220px] min-h-10 flex gap-2 items-center border-[0.5px] px-3 py-1.5 rounded-lg cursor-pointer select-none
+                    shrink-0 flex-1 min-w-40 max-w-55 min-h-10 flex gap-2 items-center border-[0.5px] px-3 py-1.5 rounded-lg cursor-pointer select-none
                     ${field.value ? 'border-neutral-600 bg-secondary' : 'border-neutral-400'}
                 }`}
             >

@@ -8,6 +8,7 @@ import {
 	Building2,
 	Calendar,
 	FolderCog,
+	Inbox,
 	LayoutDashboard,
 	LayoutTemplate,
 	Users
@@ -36,6 +37,7 @@ const RootLayout = ({ children }: { children: ReactElement }): ReactElement => {
 		{ icon: Briefcase, label: t('titles.divisions'), href: "/divisions", permissions: [] },
 		{ icon: Users, label: t('titles.users'), href: "/users", permissions: [] },
 		{ icon: FolderCog, label: t('titles.operations'), href: "/operations", permissions: [] },
+		{ icon: Inbox, label: 'My Workspace', href: "/workspace", permissions: [] },
 		{ icon: LayoutTemplate, label: t('titles.templates'), href: "/templates", permissions: [] }
 	];
 

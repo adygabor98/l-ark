@@ -17,6 +17,7 @@ import type {
     AvailableToken,
     FieldTokenAttrs
 } from '../../export-layout.models';
+import { getRenderIntent } from '../../utils/render-intent';
 
 const FIELD_TOKEN_PLUGIN_KEY = new PluginKey('fieldTokenSuggestion');
 
@@ -27,6 +28,12 @@ export const FieldTokenNode = Node.create({
     atom: true,
     selectable: true,
     draggable: false,
+    /** Disallow ANY marks on field tokens. Without this, marks like
+     *  textStyle/fontSize wrap the token in `<span>` elements, which break
+     *  the flex parent chain that lets the dotted underline stretch to fill
+     *  the line. By forbidding marks entirely the token is always a direct
+     *  child of its paragraph and `flex: 1 1 auto` reliably applies. */
+    marks: '',
 
     addAttributes() {
         return {
@@ -57,8 +64,27 @@ const buildPreviewFieldTokenExtension = () => {
     return FieldTokenNode.extend({
         renderHTML({ node }) {
             const { fieldType, fieldLabel } = node.attrs as FieldTokenAttrs;
-            const DATE_PLACEHOLDER = 'DD/MM/YYYY'
-            const DATETIME_PLACEHOLDER = 'DD/MM/YYYY  HH:mm'
+            const intent = getRenderIntent();
+            const isExport = intent === 'export';
+
+            // Design-mode hint (faded, smaller) vs export-mode blank underline.
+            const DATE_PLACEHOLDER = 'DD/MM/AAAA';
+            const DATETIME_PLACEHOLDER = 'DD/MM/AAAA  HH:mm';
+
+            // ── Print checkbox primitives (used under export intent) ──
+            // Blank square (U+2610 rendered via border to stay crisp at any DPI).
+            const checkboxBoxStyle =
+                'display:inline-block; width:10px; height:10px; border:1px solid rgba(0,0,0,0.65); margin-right:5px; vertical-align:-1px;';
+            const checkboxLabelStyle =
+                'font-family:Lato-Regular; font-size:0.92em; color:rgba(0,0,0,0.75); margin-right:14px; letter-spacing:0.01em;';
+            const checkboxGroupStyle =
+                'display:inline-flex; align-items:center; flex-wrap:wrap; gap:0 6px; margin:0 10px; vertical-align:-2px;';
+            const checkboxItem = (label: string) => [
+                'span',
+                { style: 'display:inline-flex; align-items:center;' },
+                ['span', { style: checkboxBoxStyle }],
+                ['span', { style: checkboxLabelStyle }, label],
+            ];
 
             const lineChar = '.';
             const blankFill = lineChar.repeat(30);
@@ -74,44 +100,34 @@ const buildPreviewFieldTokenExtension = () => {
             }
 
             if (fieldType === 'BOOLEAN') {
+                // Always render as real print checkboxes. Pills were a design
+                // affordance that leaked into exports and confused paper use.
                 return [
                     'span',
-                    { 'data-field-preview': 'BOOLEAN', style: 'display:inline-flex;align-items:center;gap:12px;' },
-                    ['span', { style: 'display:inline-flex;align-items:center;gap:4px;' },
-                        ['span', { style: 'border:1.5px solid #555;display:inline-block;width:13px;height:13px;border-radius:2px;flex-shrink:0;' }],
-                        ['span', {}, 'Yes'],
-                    ],
-                    ['span', { style: 'display:inline-flex;align-items:center;gap:4px;' },
-                        ['span', { style: 'border:1.5px solid #555;display:inline-block;width:13px;height:13px;border-radius:2px;flex-shrink:0;' }],
-                        ['span', {}, 'No'],
-                    ],
+                    { 'data-field-preview': 'BOOLEAN', style: checkboxGroupStyle },
+                    checkboxItem('Sí'),
+                    checkboxItem('No'),
                 ];
             }
 
             if (fieldType === 'FILE') {
                 return [
                     'span',
-                    { 'data-field-preview': 'FILE', style: 'display:inline-flex;align-items:center;gap:4px;' },
+                    { 'data-field-preview': 'FILE', style: 'display:inline-flex; align-items:center; gap:4px; flex: 1 1 auto; min-width: 80px; margin: 0 10px;' },
                     ['span', { style: 'font-size:12px;flex-shrink:0;' }, '📎'],
-                    ['span', { style: `${blankStyle}min-width:160px;` }, blankFill],
+                    ['span', { style: 'flex: 1 1 auto; min-width: 60px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35);' }, ''],
                 ];
             }
 
             if ( ['RADIO_GROUP', 'CHECKBOX'].includes(fieldType) ) {
                 const options = JSON.parse(node.attrs.options || '[]');
-
+                // Always render a real checkbox per option. On paper the
+                // single-vs-multi distinction is enforced by the person
+                // filling the form, not the glyph — so one style for both.
                 return [
                     'span',
-                    {
-                        'data-field-preview': 'CHECKBOX',
-                        style: 'display: inline-flex; gap: 20px;'
-                    },
-                    ...options.map((opt: any) => [
-                        'span',
-                        { style: 'display: inline-flex; align-items: center; gap: 6px;' },
-                        [ 'span', { style: `border: 1.5px solid #555; display: inline-block; width: 13px; height: 13px; border-radius: ${fieldType === 'RADIO_GROUP' ? '50%' : '2px'}; flex-shrink: 0;` } ],
-                        ['span', { style: 'font-family: Lato-Bold' }, opt.label]
-                    ])
+                    { 'data-field-preview': fieldType, style: checkboxGroupStyle },
+                    ...options.map((opt: { label: string }) => checkboxItem(opt.label)),
                 ];
             }
 
@@ -128,19 +144,43 @@ const buildPreviewFieldTokenExtension = () => {
             }
 
             if( ["DATE", "DATE_TIME"].includes(fieldType) ) {
-                return ['span', { 'data-field-preview': fieldType }, "DATE" === fieldType ? DATE_PLACEHOLDER : DATETIME_PLACEHOLDER]
+                if (isExport) {
+                    // Blank underline affordance — same style as the default
+                    // TEXT case below — so printed dates are a line to write
+                    // on, not the literal string "DD/MM/YYYY".
+                    return [
+                        'span',
+                        {
+                            'data-field-preview': fieldType,
+                            style: 'display: inline-block; flex: 1 1 auto; min-width: 80px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;',
+                        },
+                        '',
+                    ];
+                }
+                // Design mode: faded hint so it clearly reads as a hint,
+                // not a value.
+                const hintStyle =
+                    'color: rgba(0,0,0,0.3); font-size: 0.85em; font-family: Lato-Regular; letter-spacing: 0.02em; margin: 0 6px; vertical-align: baseline;';
+                return [
+                    'span',
+                    { 'data-field-preview': fieldType, style: hintStyle },
+                    fieldType === 'DATE' ? DATE_PLACEHOLDER : DATETIME_PLACEHOLDER,
+                ];
             }
 
-            // Default: underline fill that looks like a classic form blank line
+            // Default: flexible dotted fill line that stretches to fill the
+            // remainder of the paragraph. The parent paragraph is flexed via
+            // a `:has([data-field-preview])` rule in the RichTextPreview
+            // wrapper so `flex: 1` actually applies.
             return [
                 'span',
                 {
-                    'data-field-preview': '',
+                    'data-field-preview': 'TEXT',
                     'data-field-label': fieldLabel ?? '',
                     title: fieldLabel ?? '',
-                    style: blankStyle,
+                    style: 'display: inline-block; flex: 1 1 auto; min-width: 60px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;',
                 },
-                blankFill,
+                '',
             ];
         },
     });

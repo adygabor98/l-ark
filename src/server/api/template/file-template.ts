@@ -6,7 +6,8 @@ import {
     EXPORT_LAYOUT_API_RESPONSE,
     EXPORT_LAYOUT_FIELDS,
     FILE_TEMPLATE_DETAIL,
-    FILE_TEMPLATES_SUMMARY
+    FILE_TEMPLATES_SUMMARY,
+    FORM_INSTANCE_DETAIL
 } from "./file-template.fragment";
 
 /**************************************************************************** */
@@ -87,12 +88,110 @@ export const DELETE_FILE_TEMPLATE_VERSION = gql`
     }
 `;
 
+export const DUPLICATE_FILE_TEMPLATE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlDuplicateFileTemplate($id: ID!) {
+        data: gqlDuplicateFileTemplate(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const ARCHIVE_FILE_TEMPLATE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlArchiveFileTemplate($id: ID!) {
+        data: gqlArchiveFileTemplate(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const RESTORE_FILE_TEMPLATE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlRestoreFileTemplate($id: ID!) {
+        data: gqlRestoreFileTemplate(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const DELETE_FILE_TEMPLATE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlDeleteFileTemplate($id: ID!) {
+        data: gqlDeleteFileTemplate(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
 export const SAVE_FILE_TEMPLATE_EXPORT_LAYOUT = gql`
     ${EXPORT_LAYOUT_API_RESPONSE}
 
     mutation gqlSaveFileTemplateExportLayout($templateVersionId: ID!, $input: ExportLayoutInput!) {
         data: gqlSaveFileTemplateExportLayout(templateVersionId: $templateVersionId, input: $input) {
             ...ExportLayoutApiResponse
+        }
+    }
+`;
+
+/**************************************************************************** */
+/************************ FORM INSTANCE QUERIES ***************************** */
+/**************************************************************************** */
+
+export const RETRIEVE_FORM_INSTANCE = gql`
+    ${FORM_INSTANCE_DETAIL}
+
+    query gqlRetrieveFormInstance($id: ID!) {
+        data: gqlRetrieveFormInstance(id: $id) {
+            ...FormInstanceDetail
+        }
+    }
+`;
+
+/**************************************************************************** */
+/************************ FORM INSTANCE MUTATIONS *************************** */
+/**************************************************************************** */
+
+export const CREATE_FORM_INSTANCE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlCreateFormInstance($input: CreateFormInstanceInput!) {
+        data: gqlCreateFormInstance(input: $input) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const SAVE_FORM_INSTANCE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlSaveFormInstance($id: ID!, $input: SaveFormInstanceInput!) {
+        data: gqlSaveFormInstance(id: $id, input: $input) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const SUBMIT_FORM_INSTANCE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlSubmitFormInstance($id: ID!) {
+        data: gqlSubmitFormInstance(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+export const REMOVE_FORM_INSTANCE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlRemoveFormInstance($id: ID!) {
+        data: gqlRemoveFormInstance(id: $id) {
+            ...FileTemplateApiGenericResponse
         }
     }
 `;

@@ -250,6 +250,12 @@
         "preview": "Preview",
         "duplicate": "Duplicate",
         "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete Permanently",
+        "archive-confirm-title": "Archive Template",
+        "archive-confirm-description": "This template will be archived and no longer available for new operations. You can restore it later if needed.",
+        "delete-confirm-title": "Delete Template Permanently",
+        "delete-confirm-description": "This action cannot be undone. The template will be permanently deleted only if it has no linked operations and no submitted form instances.",
         "confirm-delete-version": "Are you sure you want to remove the latest un-published version?"
     },
     "export-layout": {
@@ -290,6 +296,8 @@
         "watermark-placeholder": "e.g. DRAFT, CONFIDENTIAL",
         "watermark-hint": "Displays diagonally across every page.",
         "watermark-color": "Color",
-        "watermark-opacity": "Opacity:"
+        "watermark-opacity": "Opacity:",
+        "logo-organization-text": "Organization text",
+        "logo-organization-text-placeholder": "e.g. ACME Corporation"
     }
 }

@@ -60,6 +60,9 @@ import ImageBlock from '../blocks/image-block';
 import SignatureBlock from '../blocks/signature-block';
 import DividerBlock from '../blocks/divider-block';
 import PageBreakBlock from '../blocks/page-break-block';
+import FormGridBlock from '../blocks/form-grid-block';
+import FieldGridBlock from '../blocks/field-grid-block';
+import CheckboxGridBlock from '../blocks/checkbox-grid-block';
 import {
     type ExportBlock,
     type ExportRow,
@@ -148,6 +151,9 @@ const BlockContent = memo(function BlockContent({ block }: { block: ExportBlock 
         case 'SIGNATURE': return <SignatureBlock block={block} />;
         case 'DIVIDER': return <DividerBlock block={block} />;
         case 'PAGE_BREAK': return <PageBreakBlock />;
+        case 'FIELD_GRID': return <FieldGridBlock block={block} />;
+        case 'CHECKBOX_GRID': return <CheckboxGridBlock block={block} />;
+        case 'FORM_GRID': return <FormGridBlock block={block} />;
         case 'BLANK': return <div className="w-full h-full min-h-10 border border-dashed border-black/15 rounded-md bg-black/1 flex items-center justify-center"><span className="text-[10px] text-black/25 font-[Lato-Regular] select-none">Empty space</span></div>;
         default: return <></>;
     }
@@ -799,6 +805,14 @@ const BlockCanvas = (): ReactElement => {
     const wmColor = state.pageConfig.watermarkColor ?? '#000000';
     const wmOpacity = state.pageConfig.watermarkOpacity ?? WATERMARK_DEFAULT_OPACITY;
 
+    // Sidebar band
+    const hasSidebar = state.pageConfig.showSidebar;
+    const sidebarWidthMm = hasSidebar ? (state.pageConfig.sidebarWidth ?? 8) : 0;
+    const sidebarPos = state.pageConfig.sidebarPosition ?? 'left';
+    const sidebarWidthPx = sidebarWidthMm * PX_PER_MM;
+    const effectiveLeft = sidebarPos === 'left' ? left + sidebarWidthMm : left;
+    const effectiveRight = sidebarPos === 'right' ? right + sidebarWidthMm : right;
+
     const contentMinHeight = pageHeightPx - (top + bottom) * PX_PER_MM;
 
     const pageBoundaryCount = Math.floor(paperHeight / pageHeightPx);
@@ -818,11 +832,37 @@ const BlockCanvas = (): ReactElement => {
             <div style={{ height: '100%', zoom: scale }}>
                 <div ref={paperRef} className="bg-white relative"
                     style={{ width: pageWidth, minHeight: pageHeightPx,
-                        padding: `${top}mm ${right}mm ${bottom}mm ${left}mm`,
+                        padding: `${top}mm ${effectiveRight}mm ${bottom}mm ${effectiveLeft}mm`,
                         boxShadow: '0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)',
                     }}
                     onClick={e => e.stopPropagation()}
                 >
+                    {/* Sidebar band */}
+                    { hasSidebar &&
+                        <div className="absolute top-0 bottom-0 z-20 flex items-center justify-center overflow-hidden"
+                            style={{
+                                [sidebarPos]: 0,
+                                width: sidebarWidthPx,
+                                backgroundColor: state.pageConfig.sidebarColor ?? '#1a1a2e',
+                            }}
+                        >
+                            { (state.pageConfig.sidebarText ?? '') &&
+                                <span className="font-[Lato-Black] uppercase tracking-[0.25em] whitespace-nowrap select-none"
+                                    style={{
+                                        writingMode: 'vertical-rl',
+                                        textOrientation: 'mixed',
+                                        transform: 'rotate(180deg)',
+                                        color: state.pageConfig.sidebarTextColor ?? '#ffffff',
+                                        fontSize: state.pageConfig.sidebarFontSize ?? 14,
+                                        maxHeight: '90%',
+                                        overflow: 'hidden',
+                                    }}
+                                >
+                                    {state.pageConfig.sidebarText}
+                                </span>
+                            }
+                        </div>
+                    }
                     {/* Watermark */}
                     { wmText &&
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden" style={{ zIndex: 0 }}>

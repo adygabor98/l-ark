@@ -95,10 +95,7 @@ const TemplateCreationForm = (props: PropTypes): ReactElement => {
                             {/* Description Input */}
                             <Field control={control} name='description' label={ t('labels.template-description') } placeholder={ t('placeholders.template-description') } type='textarea' />
 
-                            <div className='grid grid-cols-2 gap-5'>
-                                <Field control={control} name='divisions' label={ t('labels.divisions') } placeholder={ t('placeholders.select-divisions') } type='select' dataType='divisions' multiple required />
-                                <Field control={control} name='operations' label={ t('labels.operations') } placeholder={ t('placeholders.select-operations') } type='select' dataType='operations' multiple />
-                            </div>
+                            <Field control={control} name='divisions' label={ t('labels.divisions') } placeholder={ t('placeholders.select-divisions') } type='select' dataType='divisions' multiple required />
                         </div>
 
                         {/* Actions */}

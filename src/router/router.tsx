@@ -37,13 +37,18 @@ import OfficeDetail from "../features/offices/office-detail";
 import DivisionsManagement from "../features/divisions/divisions.management";
 import DivisionDetail from "../features/divisions/division-detail";
 import UserDetail from "../features/user/user-detail";
-import OperationsManagement from "../features/operations/operations.management";
+import RolesPermissionsManagement from "../features/roles/roles-permissions.management";
+
 import TemplatesManagement from "../features/templates/templates.management";
 import TemplateDetail from "../features/templates/template-detail";
 import ExportLayoutPage from "../features/templates/export-layout/export-layout.page";
-import { PermissionsProvider, RolesManagement } from "../features/roles";
-import { OperationProvider } from "../features/operations/context/operation-context";
-import OperationDetail from "../features/operations/operation-detail";
+
+import OperationBlueprintsManagement from "../features/operation-blueprints/operation-blueprints-management";
+import OperationBlueprintDetail from "../features/operation-blueprints/operation-blueprint-detail";
+
+import WorkspaceManagement from "../features/workspace/workspace.management";
+import WorkspaceNew from "../features/workspace/workspace-new";
+import WorkspaceDetail from "../features/workspace/workspace-detail";
 
 // Component to initialize global navigation and token expiration monitoring
 const NavigationInitializer = () => {
@@ -113,7 +118,7 @@ export const globalRoutes = [
 					<Suspense fallback={<Loading />}>
 						<ProtectedRoute>
 							<RootLayout>
-								<AgendaManagement />
+							<AgendaManagement />
 							</RootLayout>
 						</ProtectedRoute>
 					</Suspense>
@@ -125,7 +130,7 @@ export const globalRoutes = [
 					<Suspense fallback={<Loading />}>
 						<ProtectedRoute>
 							<RootLayout>
-								<DashboardManagement />
+							<DashboardManagement />
 							</RootLayout>
 						</ProtectedRoute>
 					</Suspense>
@@ -140,7 +145,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<UsersManagement />
+									<UsersManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -152,7 +157,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<UserDetail />
+									<UserDetail />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -169,7 +174,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<OfficesManagement />
+									<OfficesManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -181,7 +186,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<OfficeDetail />
+									<OfficeDetail />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -198,7 +203,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<DivisionsManagement />
+									<DivisionsManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -210,7 +215,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<DivisionDetail />
+									<DivisionDetail />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -227,22 +232,61 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<OperationsManagement />
+										<OperationBlueprintsManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
 						)
 					},
 					{
-						path: "detail/:id?",
+						path: "detail",
 						element: (
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
-									<OperationProvider>
-										<RootLayout>
-											<OperationDetail />
-										</RootLayout>
-									</OperationProvider>
+									<RootLayout>
+										<OperationBlueprintDetail />
+									</RootLayout>
+								</ProtectedRoute>
+							</Suspense>
+						)
+					}
+				]
+			},
+			{
+				path: "workspace",
+				children: [
+					{
+						path: "",
+						element: (
+							<Suspense fallback={<Loading />}>
+								<ProtectedRoute>
+									<RootLayout>
+										<WorkspaceManagement />
+									</RootLayout>
+								</ProtectedRoute>
+							</Suspense>
+						)
+					},
+					{
+						path: "new",
+						element: (
+							<Suspense fallback={<Loading />}>
+								<ProtectedRoute>
+									<RootLayout>
+										<WorkspaceNew />
+									</RootLayout>
+								</ProtectedRoute>
+							</Suspense>
+						)
+					},
+					{
+						path: "detail/:id",
+						element: (
+							<Suspense fallback={<Loading />}>
+								<ProtectedRoute>
+									<RootLayout>
+										<WorkspaceDetail />
+									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
 						)
@@ -258,7 +302,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<TemplatesManagement />
+									<TemplatesManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -270,7 +314,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<TemplateDetail />
+									<TemplateDetail />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -282,7 +326,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<ExportLayoutPage />
+									<ExportLayoutPage />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -295,11 +339,9 @@ export const globalRoutes = [
 				element: (
 					<Suspense fallback={<Loading />}>
 						<ProtectedRoute>
-							<PermissionsProvider>
-								<RootLayout>
-									<RolesManagement />
-								</RootLayout>
-							</PermissionsProvider>
+							<RootLayout>
+								<RolesPermissionsManagement />
+							</RootLayout>
 						</ProtectedRoute>
 					</Suspense>
 				)
@@ -310,7 +352,7 @@ export const globalRoutes = [
 					<Suspense fallback={<Loading />}>
 						<ProtectedRoute>
 							<RootLayout>
-								<SettingsManagement />
+							<SettingsManagement />
 							</RootLayout>
 						</ProtectedRoute>
 					</Suspense>

@@ -202,7 +202,19 @@ const HeaderFooterZone = ({ zone }: HeaderFooterZoneProps): ReactElement | null 
         <div className={`px-3 py-2 rounded-lg border text-xs ${ isHeader ? 'border-black/10 bg-black/2 mb-1' : 'border-black/10 bg-black/2 mt-1' }`}>
             { isHeader ?
                 <div className="flex items-start gap-3">
-                    { pageConfig.showLogo && <LogoUpload logoUrl={pageConfig.logoUrl} logoWidth={logoWidth} /> }
+                    { pageConfig.showLogo &&
+                        <div className="flex flex-col items-center shrink-0 gap-1">
+                            <LogoUpload logoUrl={pageConfig.logoUrl} logoWidth={logoWidth} />
+                            { (pageConfig.logoOrganizationText ?? '').length > 0 &&
+                                <span
+                                    className="text-[10px] text-black/60 font-[Lato-Regular] text-center leading-tight"
+                                    style={{ maxWidth: logoWidth, wordBreak: 'break-word' }}
+                                >
+                                    { pageConfig.logoOrganizationText }
+                                </span>
+                            }
+                        </div>
+                    }
                     <ZoneEditor content={pageConfig.headerContent} onUpdate={handleContentUpdate} placeholder="Type header text here... use @ to insert fields" tokens={tokens} />
                 </div>
             :

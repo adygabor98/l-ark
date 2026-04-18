@@ -34,4 +34,21 @@ export const PAGE_DIMS = {
 } as const;
 
 /** Default watermark opacity. */
-export const WATERMARK_DEFAULT_OPACITY = 0.08;
+export const WATERMARK_DEFAULT_OPACITY = 0.12;
+
+// ─── Preview design tokens ─────────────────────────────────────────────────────
+// Centralized so block previews stay visually consistent.
+
+/** Subtle structural border (replaces /6, /8, /10). */
+export const PREVIEW_BORDER_SUBTLE = 'rgba(0,0,0,0.08)';
+
+/** Stronger emphasis border (replaces /15, /20, /30). */
+export const PREVIEW_BORDER_STRONG = 'rgba(0,0,0,0.15)';
+
+/** Accent color (matches l-Ark amber/gold). */
+export const PREVIEW_ACCENT = '#FFBF00';
+
+/** Tailwind class shortcuts for preview text tones. */
+export const PREVIEW_TEXT_LABEL = 'text-black/60';
+export const PREVIEW_TEXT_VALUE = 'text-black/55';
+export const PREVIEW_TEXT_PLACEHOLDER = 'text-black/40';

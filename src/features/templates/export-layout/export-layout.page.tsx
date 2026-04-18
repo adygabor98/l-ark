@@ -63,11 +63,12 @@ const ExportLayoutInner = (): ReactElement => {
                 const response: FetchResult<{ data: FileTemplateExportLayout }> = await retrieveFileTemplateExportLayout({ templateVersionId: Number(state.versionId) })
                 if( response ) {
                     const layout = (response as any)?.data?.data;
+                    console.log(layout)
                     if (layout?.layoutData) {
                         const data = typeof layout.layoutData === 'string'
                             ? JSON.parse(layout.layoutData)
                             : layout.layoutData;
-
+                        console.log(data);
                         if (data.rows && data.pageConfig) {
                             dispatch({
                                 type: 'LOAD_LAYOUT',
@@ -287,7 +288,7 @@ export default function ExportLayoutPage(): ReactElement {
                         label: f.label,
                         type: f.type,
                         options: f.options,
-                        columns: f.columns,
+                        columns: f.columns
                     })),
                 }));
 

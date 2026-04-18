@@ -1,34 +1,19 @@
 /**
  * Permission Structure
- * Matches the structure defined in roles.management.tsx
+ * Nested JSON object matching the database format:
+ * { resource: { action: boolean } }
+ * e.g. { users: { view: true, edit: false }, offices: { view: true } }
  */
 export interface PermissionStructure {
-    
+    [resource: string]: {
+        [action: string]: boolean;
+    };
 }
 
 /**
- * Helper type to generate nested key paths with dot notation
+ * Permission path in dot notation, e.g. "users.view", "offices.edit"
  */
-type NestedKeyOf<T, Prefix extends string = ''> = {
-    [K in keyof T]: T[K] extends boolean
-        ? `${Prefix}${K & string}`
-        : T[K] extends object
-        ? NestedKeyOf<T[K], `${Prefix}${K & string}.`>
-        : never;
-}[keyof T];
-
-/**
- * Type-safe permission path
- * Generates union type of all valid permission paths like "users.view", "tasks.assignments.create"
- */
-export type PermissionPath = NestedKeyOf<PermissionStructure>;
-
-/**
- * Permission path constants for autocomplete and type safety
- */
-export const PERMISSION_PATHS = {
-    
-} as const satisfies Record<string, PermissionPath>;
+export type PermissionPath = string;
 
 /**
  * Permission check options

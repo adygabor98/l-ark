@@ -3,7 +3,7 @@ import {
 } from "@apollo/client";
 
 /**************************************************************************** */
-/**************************** USER FRAGMENTS ******************************** */
+/**************************** ROLE FRAGMENTS ******************************** */
 /**************************************************************************** */
 
 export const ROLE_FIELDS = gql`
@@ -11,5 +11,18 @@ export const ROLE_FIELDS = gql`
         id
         code
         name
+        permissions
+    }
+`;
+
+
+export const API_ROLE_RESPONSE = gql`    
+    fragment RoleApiResponse on ApiResponse {
+        success
+        message
+        errors {
+            field
+            message
+        }
     }
 `;

@@ -34,6 +34,9 @@ import {
 import {
     useToast
 } from '../../../../shared/hooks/useToast';
+import {
+    getResponseMessage
+} from '../../../../server/hooks/useApolloWithToast';
 import type {
     FetchResult
 } from '@apollo/client';
@@ -76,7 +79,7 @@ const ShortcutsPopover = ({ onClose }: { onClose: () => void }): ReactElement =>
 
 const ExportLayoutHeader = (): ReactElement => {
     /** Export layout api utilities */
-    const { state, dispatch, saveCallbackRef } = useExportLayout();
+    const { state, dispatch, saveCallbackRef, setRenderIntent } = useExportLayout();
     /** File template api utilities */
     const { savefileTemplateExportLayout } = useFileTemplate();
     /** Navigation utilities */
@@ -108,7 +111,15 @@ const ExportLayoutHeader = (): ReactElement => {
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         }
 
+        // Flip to export-intent rendering: blank fields, print checkboxes,
+        // no "Sample text" / "DD/MM/YYYY" literals leaking into the capture.
+        // Reset in the finally block below so the builder UI keeps its
+        // designer-friendly sample values.
+        setRenderIntent('export');
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
         const generatePDF = async (): Promise<number> => {
+          try {
             // Ensure fonts are loaded so pagination measurements are accurate
             await document.fonts.ready;
             // Allow one extra frame for re-measurement + re-render to settle
@@ -150,6 +161,11 @@ const ExportLayoutHeader = (): ReactElement => {
             const safeName = (state.templateName || 'Document').replace(/[^a-zA-Z0-9 _-]/g, '');
             pdf.save(`${safeName} - Export.pdf`);
             return 200;
+          } finally {
+            // Always restore designer view so sample values reappear for
+            // the next edit session, even if capture threw.
+            setRenderIntent('design');
+          }
         };
 
         onPromiseToast({
@@ -179,7 +195,7 @@ const ExportLayoutHeader = (): ReactElement => {
                 } else {
                     setSaveStatus('error');
                 }
-                onToast({ message: response?.data?.data?.message ?? '', type: response?.data?.data.success ? 'success' : 'error' });
+                onToast({ message: getResponseMessage(response?.data?.data), type: response?.data?.data.success ? 'success' : 'error' });
             } catch {
                 setSaveStatus('error');
             } finally {

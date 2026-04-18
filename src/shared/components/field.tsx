@@ -21,6 +21,7 @@ import TextField from './form/text-input';
 import RadioCheckbox from './form/radio-checkbox';
 import TimeEntryInput from './form/time-entry-input';
 import SwitchInput from './form/switch-input';
+import ToggleSwitchInput from './form/toggle-switch-input';
 
 interface IPropTypes {
     disabled?: boolean;
@@ -68,11 +69,13 @@ const Field = (props: IPropTypes) => {
             case 'number':
                 return <NumberField field={field} suffix={suffix} />;
             case 'radio':
-                return <RadioField field={field} label={label} disabled={disabled} />;
+                return <RadioField field={field} label={label} disabled={disabled} dataType={dataType as string} />;
             case 'image':
                 return <FileInput field={field} />;
             case 'switch':
                 return <SwitchInput field={field} />
+            case 'toggle-switch':
+                return <ToggleSwitchInput field={field} label={label || ''} placeholder={placeholder || ''} />
             case 'select':
                 return <SelectInput
                     field={field}
@@ -101,13 +104,16 @@ const Field = (props: IPropTypes) => {
         <Controller
             name={name}
             control={control}
+            shouldUnregister={false}
             rules={{
                 required: required ? (typeof required === 'string' ? required : t('messages.required')) : false,
                 ...(pattern ? { pattern } : {}),
                 ...(validators ?? {})
             }}
             render={({ field, fieldState }) =>
-                simple && label ?
+                type === 'toggle-switch' ?
+                    renderType(field)
+                : simple && label ?
                     <div className='flex flex-col gap-2'>
                         <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { label } </label>
                         <div className={`w-full flex flex-col border-[0.5px] ${fieldState.invalid ? 'h-auto border-red-400' : type === 'textarea' ? 'min-h-25 h-auto border-gray-300' : type === 'checkbox' ? 'min-h-15' : 'h-auto border-gray-300'} rounded-md ${className} bg-secondary/50 border-border/50 focus:bg-background focus:border-primary/30 transition-all shadow-sm`}>

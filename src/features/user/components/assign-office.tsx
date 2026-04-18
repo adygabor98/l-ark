@@ -38,6 +38,11 @@ import {
     useOffice
 } from '../../../server/hooks/useOffice';
 import {
+    extractFieldErrors,
+    applyResponseErrors,
+    getResponseMessage
+} from '../../../server/hooks/useApolloWithToast';
+import {
     Avatar,
     AvatarFallback
 } from '../../../shared/components/avatar';
@@ -69,7 +74,7 @@ const AssignOffice = (props: PropTypes): ReactElement => {
     /** Permissions utilities */
     const { user } = usePermissions();
     /** Definition of the formulary */
-    const { control, handleSubmit, reset } = useForm<any>({
+    const { control, handleSubmit, reset, setError, clearErrors } = useForm<any>({
         mode: 'onChange',
         defaultValues: {
             idOfficeUser: '',
@@ -130,7 +135,8 @@ const AssignOffice = (props: PropTypes): ReactElement => {
             }
         }
 
-        onToast({ message: response?.data?.data.message ?? '', type: response?.data?.data?.success ? 'success' : 'error' });
+        if( !response?.data?.data?.success ) applyResponseErrors(response?.data?.data?.errors, setError);
+        onToast({ message: getResponseMessage(response?.data?.data), type: response?.data?.data?.success ? 'success' : 'error' });
         setLoading(false);
         reset({ idOfficeUser: '', idOffice: '', idUser: '', isEnabled: true });
         setOpen(null);
@@ -165,7 +171,8 @@ const AssignOffice = (props: PropTypes): ReactElement => {
             response = await updateOfficeToDivision({ idOfficeDivision: assignment.id, idOffice: data.idOffice, idDivision: idDivision.toString(), idUser: data.idUser, isEnabled: data.isEnabled });
         }
 
-        onToast({ message: response?.data?.data.message ?? '', type: response?.data?.data?.success ? 'success' : 'error' });
+        if( !response?.data?.data?.success ) applyResponseErrors(response?.data?.data?.errors, setError);
+        onToast({ message: getResponseMessage(response?.data?.data), type: response?.data?.data?.success ? 'success' : 'error' });
         setLoading(false);
         reset({ idOfficeUser: '', idOffice: '', idUser: '', isEnabled: true });
         setOpen(null);
@@ -182,7 +189,7 @@ const AssignOffice = (props: PropTypes): ReactElement => {
                 await onCreateAssignments(data);
             }
         } catch(e) {
-            console.error(e);
+            extractFieldErrors(e).forEach(({ field, message }) => setError(field as any, { message }));
             setLoading(false);
         }
     }
@@ -294,7 +301,7 @@ const AssignOffice = (props: PropTypes): ReactElement => {
                         <div className='h-full flex flex-col gap-4 mb-2'>
                             <Field control={control} name='idOffice' label={ t('offices.office') } type='select' dataType='offices' params={{ idUser: isEdition ? null : idUser, idDivision: isEdition ? null : idDivision }} placeholder={ t('placeholders.select-office') } required disabled={isEdition} />
                             { idDivision &&
-                                <Field control={control} name='idUser' label={ t('labels.manager') } type='select' dataType='users' placeholder={ t('placeholders.select-employee') } required />
+                                <Field control={control} name='idUser' label={ t('labels.manager') } type='select' dataType='users' params={{ idUser: isEdition ? null : idUser, idDivision: idDivision }} placeholder={ t('placeholders.select-employee') } required />
                             }
                             { isEdition &&
                                 <Field control={control} name='isEnabled' label={ t('labels.active') } type='checkbox' />
@@ -310,7 +317,7 @@ const AssignOffice = (props: PropTypes): ReactElement => {
                                 <Button variant='secondary' onClick={( )=> onCancel()}>
                                     { t('buttons.cancel') }
                                 </Button>
-                                <Button variant='primary' onClick={handleSubmit(onSubmit)}>
+                                <Button variant='primary' onClick={() => { clearErrors(); handleSubmit(onSubmit)(); }}>
                                     { loading ? t('buttons.saving') : t('buttons.assign') }
                                 </Button>
                             </div>

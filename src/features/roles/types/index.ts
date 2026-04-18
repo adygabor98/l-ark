@@ -1,46 +1,43 @@
-// ── Scope types ──────────────────────────────────────────────
-export type ScopeType = 'global' | 'office' | 'division' | 'office_division';
+
 
 export type Resource =
-  | 'activity_log'
-  | 'roles_permissions'
-  | 'users'
-  | 'offices'
-  | 'divisions'
-  | 'templates'
-  | 'operations';
+	| 'activity_log'
+	| 'roles_permissions'
+	| 'users'
+	| 'offices'
+	| 'divisions'
+	| 'templates'
+	| 'operations'
+	| 'agenda';
 
 export type Action =
-  | 'view'
-  | 'create'
-  | 'edit'
-  | 'soft_delete'
-  | 'permanent_delete'
-  | 'complete';
+	| 'view'
+	| 'create'
+	| 'edit'
+	| 'soft_delete'
+	| 'permanent_delete'
+	| 'view_all'
+	| 'view_mine'
+	| 'view_mine_and_sub';
 
-// ── Permission definition ───────────────────────────────────
 export interface Permission {
-  key: string;           // e.g. 'users.view'
-  label: string;         // e.g. 'View'
-  description: string;   // e.g. 'View users list and details'
-  resource: Resource;
-  action: Action;
-  scopeType: ScopeType;
+	key: string;
+	label: string;
+	description: string;
+	resource: Resource;
+	action: Action;
 }
 
-// ── Role definition ─────────────────────────────────────────
+export interface RolePermissions {
+	[resource: string]: {
+		[action: string]: boolean;
+	};
+}
+
 export interface Role {
-  id: string;
-  name: string;          // 'Director General'
-  shortName: string;     // 'DG'
-  description: string;
-  permissions: string[]; // permission keys enabled by default
-}
-
-// ── User (simplified — role assignment only, scopes managed elsewhere) ──
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  roleId?: string;       // assigned role id
+	id: string;
+	name: string;
+	shortName: string;
+	description: string;
+	permissions: RolePermissions;
 }

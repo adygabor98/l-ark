@@ -425,7 +425,7 @@ const TemplateDocumentPreview = (props: PropTypes): ReactElement | null => {
                                                         <input readOnly placeholder={field.placeholder} className="h-7 w-full bg-transparent border-b border-black/15 text-[11px] px-1 outline-none" />
                                                     }
                                                     { field.type === TemplateComponents.TEXTAREA &&
-                                                        <textarea readOnly placeholder={field.placeholder} className="min-h-[200px] w-full bg-transparent border-b border-black/15 text-[11px] px-1 pt-1 outline-none resize-none" />
+                                                        <textarea readOnly placeholder={field.placeholder} className="min-h-50 w-full bg-transparent border-b border-black/15 text-[11px] px-1 pt-1 outline-none resize-none" />
                                                     }
                                                     { field.type === TemplateComponents.NUMBER &&
                                                         <input readOnly type="number" placeholder={field.placeholder} className="h-7 w-full bg-transparent border-b border-black/15 text-[11px] px-1 outline-none" />
@@ -461,7 +461,7 @@ const TemplateDocumentPreview = (props: PropTypes): ReactElement | null => {
                                                             { (field.options || []).map((opt: any, i: number) => (
                                                                 <div key={i} className="flex items-center gap-1.5 py-1 px-2 border border-black/8 bg-black/1 rounded-sm">
                                                                     <div className="w-3 h-3 rounded-full border border-black/20 bg-white shrink-0" />
-                                                                    <label className="text-[11px] font-[Lato-Regular] whitespace-nowrap"> { opt.label || opt } </label>
+                                                                    <label className="text-[11px] font-[Lato-Regular] whitespace-nowrap"> { opt.label ?? opt.value ?? '' } </label>
                                                                 </div>
                                                             )) }
                                                         </div>
@@ -472,7 +472,7 @@ const TemplateDocumentPreview = (props: PropTypes): ReactElement | null => {
                                                             { (field.options || []).map((opt: any, i: number) => (
                                                                 <div key={i} className="flex items-center gap-1.5 py-1 px-2 border border-black/8 bg-black/1 rounded-sm">
                                                                     <div className="w-3 h-3 rounded border border-black/20 bg-white shrink-0" />
-                                                                    <label className="text-[11px] font-[Lato-Regular] whitespace-nowrap"> { opt.label || opt } </label>
+                                                                    <label className="text-[11px] font-[Lato-Regular] whitespace-nowrap"> { opt.label ?? opt.value ?? '' } </label>
                                                                 </div>
                                                             )) }
                                                         </div>
@@ -517,42 +517,49 @@ const TemplateDocumentPreview = (props: PropTypes): ReactElement | null => {
                                                         </div>
                                                     }
 
-                                                    { field.type === TemplateComponents.TABLE &&
-                                                        <div className="w-full border border-black/10 overflow-hidden bg-white">
-                                                            <table className="w-full text-left border-collapse">
-                                                                <thead>
-                                                                    <tr className="bg-black/3 border-b border-black/10">
-                                                                        { (field.columns || [{ id: '1', name: 'Column 1' }, { id: '2', name: 'Column 2' }]).map((col: any) =>
-                                                                            <th key={col.id} className="py-1.5 px-2 text-[10px] font-[Lato-Bold] text-black/50 uppercase tracking-wider whitespace-nowrap"> { col.name } </th>
-                                                                        )}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    { [0, 1].map(rowIdx =>
-                                                                        <tr key={rowIdx} className="border-b border-black/5">
-                                                                            { (field.columns || [1, 2]).map((_: any, i: number) =>
-                                                                                <td key={i} className="py-1 px-2">
-                                                                                    <div className="h-6 bg-black/2 rounded-sm border border-black/8" />
-                                                                                </td>
-                                                                            ) }
+                                                    { field.type === TemplateComponents.TABLE && (() => {
+                                                        const cols = field.columns?.length
+                                                            ? field.columns
+                                                            : [{ id: '1', name: 'Column 1' }, { id: '2', name: 'Column 2' }];
+                                                        return (
+                                                            <div className="w-full border border-black/10 overflow-hidden bg-white">
+                                                                <table className="w-full text-left border-collapse">
+                                                                    <thead>
+                                                                        <tr className="bg-black/3 border-b border-black/10">
+                                                                            { cols.map((col: any) =>
+                                                                                <th key={col.id} className="py-1.5 px-2 text-[10px] font-[Lato-Bold] text-black/50 uppercase tracking-wider whitespace-nowrap">
+                                                                                    { col.name }
+                                                                                </th>
+                                                                            )}
                                                                         </tr>
-                                                                    ) }
-                                                                </tbody>
-                                                            </table>
-                                                            <div className="py-1 px-2 border-t border-black/8 bg-black/1">
-                                                                <button className="text-[10px] text-black/40 font-[Lato-Regular] flex items-center gap-1 hover:text-black/60">
-                                                                    <Plus className="w-2.5 h-2.5" /> Add Row
-                                                                </button>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        { [0, 1].map(rowIdx => (
+                                                                            <tr key={rowIdx} className="border-b border-black/5">
+                                                                                { cols.map((_: any, i: number) => (
+                                                                                    <td key={i} className="py-1 px-2">
+                                                                                        <div className="h-6 bg-black/2 rounded-sm border border-black/8" />
+                                                                                    </td>
+                                                                                ))}
+                                                                            </tr>
+                                                                        )) }
+                                                                    </tbody>
+                                                                </table>
+                                                                <div className="py-1 px-2 border-t border-black/8 bg-black/1">
+                                                                    <span className="text-[10px] text-black/40 font-[Lato-Regular] flex items-center gap-1">
+                                                                        <Plus className="w-2.5 h-2.5" /> Add Row
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    }
+                                                        );
+                                                    })()}
 
                                                     { field.type === TemplateComponents.DESCRIPTION && (() => {
                                                         const content = field.placeholder || 'Descriptive text goes here.';
                                                         const isHtml = field.format === 'HTML' || (content && content.includes('<'));
 
                                                         return (
-                                                            <div className="w-full text-[11px] text-justify text-black/60 leading-relaxed min-h-[200px]">
+                                                            <div className="w-full text-[11px] text-justify text-black/60 leading-relaxed min-h-50">
                                                                 { isHtml
                                                                     ? <div dangerouslySetInnerHTML={{ __html: content }} className="rich-text prose max-w-none" />
                                                                     : <span className="whitespace-pre-wrap">{content}</span>

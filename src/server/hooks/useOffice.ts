@@ -21,6 +21,7 @@ import {
     DELETE_OFFICE_BY_ID,
     RETRIEVE_OFFICE_BY_ID,
     RETRIEVE_OFFICES,
+    RETRIEVE_OFFICES_BY_USER,
     UPDATE_OFFICE_BY_ID,
     UPDATE_OFFICE_DIVISION_ASSIGNMENT,
     UPDATE_OFFICE_USER_ASSIGNMENT
@@ -29,9 +30,11 @@ import {
 interface useOfficeResponse {
     offices: Array<OfficeBasic>;
     office: OfficeDetail;
-
+    officesUser: Array<OfficeBasic>;
+    
     retrieveOffices: () => Promise<FetchResult<{ data: Array<OfficeBasic> }>>;
     retrieveOfficeById: (variables: { id: string }) => Promise<FetchResult<{ data: OfficeDetail }>>;
+    retrieveOfficeByUser: (variables: { idUser: number }) => Promise<FetchResult<{ data: Array<OfficeBasic> }>>;
 
     checkMultipleOfficeAssignments: (variables: { idUser: string, idOffice: string }) => Promise<FetchResult<{ data: boolean }>>;
 
@@ -53,6 +56,8 @@ export const useOffice = (): useOfficeResponse => {
     const [ retrieveOffices, { data: officesList }] = useLazyQueryWithToast(RETRIEVE_OFFICES, { fetchPolicy: 'no-cache' });
     /** Manage to retrieve an office by id */
     const [ retrieveOfficeById, { data: officeData }] = useLazyQueryWithToast(RETRIEVE_OFFICE_BY_ID, { fetchPolicy: 'no-cache' });
+    /** Manage to retrieve an office by id */
+    const [ retrieveOfficeByUser, { data: officeUserData }] = useLazyQueryWithToast(RETRIEVE_OFFICES_BY_USER, { fetchPolicy: 'no-cache' });
     /** Check if the user is assigned to more than one offices  */
     const [ checkMultipleOfficeAssignments] = useLazyQueryWithToast(CHECK_MULTIPLE_OFFICE_ASSIGNMENTS, { fetchPolicy: 'no-cache' });
 
@@ -80,6 +85,9 @@ export const useOffice = (): useOfficeResponse => {
 
         office: officeData?.data ?? {},
         retrieveOfficeById: (variables: { id: string }) => retrieveOfficeById({ variables: variables }) as Promise<FetchResult<{ data: OfficeDetail }>>,
+
+        officesUser: officeUserData?.data ?? [],
+        retrieveOfficeByUser: (variables: { idUser: number }) => retrieveOfficeByUser({ variables: variables }) as Promise<FetchResult<{ data: Array<OfficeBasic> }>>,
 
         checkMultipleOfficeAssignments: (variables: { idUser: string, idOffice: string }) => checkMultipleOfficeAssignments({ variables: variables }) as Promise<FetchResult<{ data: boolean }>>,
 

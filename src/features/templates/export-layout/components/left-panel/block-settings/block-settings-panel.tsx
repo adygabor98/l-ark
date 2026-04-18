@@ -12,6 +12,9 @@ import SignatureBlockSettings from './signature-block-settings';
 import ImageBlockSettings from './image-block-settings';
 import DividerBlockSettings from './divider-block-settings';
 import TableBlockSettings from './table-block-settings';
+import FormGridBlockSettings from './form-grid-block-settings';
+import FieldGridBlockSettings from './field-grid-block-settings';
+import CheckboxGridBlockSettings from './checkbox-grid-block-settings';
 
 const BlockSettingsPanel = (): ReactElement => {
 	/** Export layout api response */
@@ -32,6 +35,9 @@ const BlockSettingsPanel = (): ReactElement => {
 				<span className="text-xs font-[Lato-Regular] text-black/50 uppercase tracking-wide"> { label } Settings </span>
 			</div>
 
+			{ block.type === 'CHECKBOX_GRID' && <CheckboxGridBlockSettings block={block} />}
+			{ block.type === 'FIELD_GRID' && <FieldGridBlockSettings block={block} />}
+			{ block.type === 'FORM_GRID' && <FormGridBlockSettings block={block} />}
 			{ block.type === 'TABLE' && <TableBlockSettings block={block} />}
 			{ block.type === 'IMAGE' && <ImageBlockSettings block={block} />}
 			{ block.type === 'SIGNATURE' && <SignatureBlockSettings block={block} />}

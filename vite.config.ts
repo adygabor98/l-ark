@@ -7,6 +7,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
 	optimizeDeps: {
 		include: [
+			'@l-ark/types',
 			'@tiptap/starter-kit',
 			'@tiptap/core',
 			'@tiptap/extension-color',
@@ -18,7 +19,6 @@ export default defineConfig({
 			'@tiptap/extension-superscript',
 			'@tiptap/extension-mention',
 			'@tiptap/extension-placeholder',
-			'@tiptap/html',
 			'@tiptap/react',
 			'@tiptap/suggestion',
 			'@tiptap/pm/state',

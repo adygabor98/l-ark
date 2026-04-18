@@ -158,6 +158,15 @@ export interface FieldTableColumns {
     type: string;
 }
 
+/**
+ * A pre-defined row in a TABLE field.
+ * `cells` maps column id → static text; empty string = blank fill line.
+ */
+export interface FieldStaticRow {
+    id: string;
+    cells: Record<string, string>;
+}
+
 export interface TemplateFormSectionFieldStructure {
     id: string;
 
@@ -174,6 +183,7 @@ export interface TemplateFormSectionFieldStructure {
 
     options: FieldOptions[];
     columns: FieldTableColumns[];
+    requiredDocuments: string[];
 }
 
 export interface TemplateFormSectionStructure {

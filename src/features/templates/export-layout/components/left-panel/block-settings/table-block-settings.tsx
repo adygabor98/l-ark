@@ -7,7 +7,7 @@ import {
 } from '../../../export-layout.context';
 import {
     TABLE_BORDERS,
-    type ExportBlock,
+    type ExportBlock
 } from '../../../export-layout.models';
 
 interface TableBlockSettingsProps {
@@ -15,10 +15,23 @@ interface TableBlockSettingsProps {
 }
 
 const TableBlockSettings = ({ block }: TableBlockSettingsProps): ReactElement => {
-    /** Export layout api utilities */
     const { state, dispatch } = useExportLayout();
 
     const boundToken = useMemo(() => state.tokens.find(t => t.fieldId === block.sourceFieldId), [state.tokens, block.sourceFieldId]);
+
+    /** Visible columns resolved the same way as table-block.tsx / preview-mode. */
+    const visibleColumns = useMemo(() => {
+        const rawCols = boundToken?.columns ?? [];
+        if (!rawCols.length) return [];
+        if (!block.settings.tableColumns?.length)
+            return rawCols.map(c => ({ id: c.id, name: c.name }));
+        return block.settings.tableColumns
+            .filter(tc => tc.visible)
+            .map(tc => {
+                const raw = rawCols.find(c => c.id === tc.colId);
+                return { id: tc.colId, name: raw?.name ?? tc.label };
+            });
+    }, [boundToken, block.settings.tableColumns]);
 
     return (
         <div className="p-4 flex flex-col gap-4">
@@ -67,9 +80,12 @@ const TableBlockSettings = ({ block }: TableBlockSettingsProps): ReactElement =>
                     <span className="text-sm text-black/60"> Alternating row colors </span>
                 </label>
             </div>
-
+          
             { !boundToken &&
                 <p className="text-[10px] text-black italic"> Bind this block to a TABLE field to configure columns. </p>
+            }
+            { boundToken && visibleColumns.length === 0 &&
+                <p className="text-[10px] text-black/40 italic"> Configure column visibility to enable pre-defined rows. </p>
             }
         </div>
     );

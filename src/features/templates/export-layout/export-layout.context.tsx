@@ -4,12 +4,17 @@ import {
     useReducer,
     useEffect,
     useRef,
+    useState,
     useCallback,
     type ReactElement,
     type ReactNode,
     type Dispatch,
     type MutableRefObject,
 } from 'react';
+import {
+    setRenderIntent as setModuleRenderIntent,
+    type RenderIntent,
+} from './utils/render-intent';
 import {
     v4 as uuidv4
 } from 'uuid';
@@ -22,7 +27,11 @@ import type {
     PageSlice,
     BlockType,
     AvailableToken,
-    ExportLayoutRouteState
+    ExportLayoutRouteState,
+    FormGridRow,
+    FormGridCell,
+    FieldGridEntry,
+    CheckboxGridItem,
 } from './export-layout.models';
 
 // State
@@ -61,6 +70,13 @@ const DEFAULT_PAGE_CONFIG: ExportPageConfig = {
     showLogo: false,
     logoWidth: 40,
     logoUrl: undefined,
+    showSidebar: false,
+    sidebarPosition: 'left',
+    sidebarWidth: 8,
+    sidebarColor: '#1a1a2e',
+    sidebarText: '',
+    sidebarTextColor: '#ffffff',
+    sidebarFontSize: 14,
 };
 
 // Helpers
@@ -133,7 +149,7 @@ type Action =
     | { type: 'REMOVE_ROW'; payload: { rowId: string } }
     | { type: 'UPDATE_BLOCK'; payload: { blockId: string; updates: Partial<ExportBlock> } }
     | { type: 'UPDATE_BLOCK_SETTINGS'; payload: { blockId: string; settings: Partial<ExportBlockSettings> } }
-    | { type: 'SPLIT_ROW'; payload: { blockId: string; targetColumns: 1 | 2 | 3 | 4 } }
+    | { type: 'SPLIT_ROW'; payload: { blockId: string; targetColumns: number } }
     | { type: 'REPLACE_BLOCK_IN_CELL'; payload: { blockId: string; newBlockType: BlockType } }
     | { type: 'UPDATE_CELL_WIDTHS'; payload: { rowId: string; widths: number[] } }
     | { type: 'REORDER_ROWS'; payload: { newOrder: string[] } }
@@ -150,7 +166,92 @@ type Action =
 
 // Block factory
 
+/** Create a default 3-row × 4-col form grid for new FORM_GRID blocks. */
+function createDefaultFormGrid(): { rows: FormGridRow[]; columns: number; columnWidths: number[] } {
+    const columns = 4;
+    const columnWidths = Array.from({ length: columns }, () => 100 / columns);
+
+    const makeCell = (overrides?: Partial<FormGridCell>): FormGridCell => ({
+        id: uuidv4(),
+        contentType: 'empty',
+        ...overrides,
+    });
+
+    const rows: FormGridRow[] = Array.from({ length: 3 }, () => ({
+        id: uuidv4(),
+        cells: Array.from({ length: columns }, () => makeCell()),
+    }));
+
+    // Default first row first cell to a label
+    rows[0].cells[0] = makeCell({ contentType: 'label', label: 'Label', fontWeight: 'bold' });
+
+    return { rows, columns, columnWidths };
+}
+
 export function createBlock(blockType: BlockType): ExportBlock {
+    if (blockType === 'CHECKBOX_GRID') {
+        const defaultItems: CheckboxGridItem[] = [
+            { id: uuidv4() },
+            { id: uuidv4() },
+            { id: uuidv4() },
+            { id: uuidv4() },
+        ];
+        return {
+            id: uuidv4(),
+            type: 'CHECKBOX_GRID',
+            settings: {
+                checkboxItems: defaultItems,
+                checkboxColumns: 4,
+                checkboxShowBorders: true,
+                checkboxBorderColor: '#e5e7eb',
+                checkboxCompact: false,
+                checkboxStyle: 'checkbox',
+                checkboxShowTitle: false,
+                checkboxTitle: '',
+            },
+        };
+    }
+
+    if (blockType === 'FIELD_GRID') {
+        const defaultEntries: FieldGridEntry[] = [
+            { id: uuidv4(), type: 'field' },
+            { id: uuidv4(), type: 'field' },
+        ];
+        return {
+            id: uuidv4(),
+            type: 'FIELD_GRID',
+            settings: {
+                gridColumns: 2,
+                gridEntries: defaultEntries,
+                gridLabelWidth: 40,
+                gridShowBorders: true,
+                gridBorderColor: '#e5e7eb',
+                gridLayout: 'label-value',
+                gridLabelAlign: 'left',
+                gridValueAlign: 'left',
+                gridValueStyle: 'underline',
+                gridCompact: false,
+            },
+        };
+    }
+
+    if (blockType === 'FORM_GRID') {
+        const grid = createDefaultFormGrid();
+        return {
+            id: uuidv4(),
+            type: 'FORM_GRID',
+            settings: {
+                formGridRows: grid.rows,
+                formGridColumns: grid.columns,
+                formGridColumnWidths: grid.columnWidths,
+                formGridBorderColor: '#d1d5db',
+                formGridBorderWidth: 1,
+                formGridCellPadding: 6,
+                formGridOuterBorder: true,
+            },
+        };
+    }
+
     return {
         id: uuidv4(),
         type: blockType,
@@ -420,6 +521,11 @@ interface ExportLayoutContextValue {
     printRef: React.RefObject<HTMLDivElement | null>;
     /** Shared pagination: the visible preview writes here so the forPrint instance can read it. */
     paginatedPagesRef: MutableRefObject<PageSlice[] | null>;
+    /** Render intent — 'design' for the builder, 'export' during PDF capture.
+     *  Lives outside the reducer because it is transient and must not be
+     *  pushed to the undo history. */
+    renderIntent: RenderIntent;
+    setRenderIntent: (intent: RenderIntent) => void;
 }
 
 
@@ -468,6 +574,14 @@ export function ExportLayoutProvider({ children, routeState }: ExportLayoutProvi
 
     /** External save callback registered by the header component */
     const saveCallbackRef = useRef<(() => void) | null>(null);
+
+    // ── Render intent (transient, outside reducer) ──
+    const [renderIntent, setRenderIntentState] = useState<RenderIntent>('design');
+    // Mirror into the module-level channel read by TipTap extensions and
+    // `sampleForColumn`, which can't easily consume React context.
+    useEffect(() => {
+        setModuleRenderIntent(renderIntent);
+    }, [renderIntent]);
 
     // ── Warn on browser tab close / refresh with unsaved changes ──
     useEffect(() => {
@@ -533,6 +647,8 @@ export function ExportLayoutProvider({ children, routeState }: ExportLayoutProvi
                 saveCallbackRef,
                 printRef,
                 paginatedPagesRef,
+                renderIntent,
+                setRenderIntent: setRenderIntentState,
             }}
         >
             {children}

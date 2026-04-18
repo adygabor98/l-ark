@@ -17,7 +17,6 @@ import {
     Copy,
     GripVertical,
     PenTool,
-    TableIcon,
     Trash2,
     Type
 } from 'lucide-react';
@@ -137,16 +136,16 @@ const SortableField = (props: PropTypes): ReactElement => {
                                 placeholder={multiple ? 'Select options...' : 'Select an option'}
                                 className="w-full bg-black/3 border-black/8 rounded-md h-11"
                                 style={{ height: 50 }}
-                                options={(options || []).map((opt: any) => ({ label: opt.label || opt, value: opt.value || opt }))}
+                                options={(options || []).map((opt: any) => ({ label: opt.label ?? opt.value ?? '', value: opt.value ?? opt.label ?? '' }))}
                             />
                         }
 
                         { field.type === TemplateComponents.RADIO_GROUP &&
-                            <Radio.Group options={(options || []).map((opt: any) => ({ label: opt.label || opt, value: opt.value || opt }))} />
+                            <Radio.Group options={(options || []).map((opt: any) => ({ label: opt.label ?? opt.value ?? '', value: opt.value ?? opt.label ?? '' }))} />
                         }
 
                         { field.type === TemplateComponents.CHECKBOX &&
-                            <Checkbox.Group options={(options || []).map((opt: any) => ({ label: opt.label || opt, value: opt.value || opt }))} />
+                            <Checkbox.Group options={(options || []).map((opt: any) => ({ label: opt.label ?? opt.value ?? '', value: opt.value ?? opt.label ?? '' }))} />
                         }
 
                         { [TemplateComponents.DATE, TemplateComponents.DATE_TIME].includes(field.type) &&
@@ -199,19 +198,18 @@ const SortableField = (props: PropTypes): ReactElement => {
                             </div>
                         }
 
-                        {field.type === TemplateComponents.TABLE &&
-                            <div className="w-full rounded-xl border border-black/8 overflow-hidden">
-                                <div className="bg-black/2 border-b border-black/8 px-4 py-2 flex items-center gap-2">
-                                    <TableIcon className="w-4 h-4 text-black/40" />
-                                    <span className="text-xs font-[Lato-Regular] text-black/50"> Data Table ({columns?.length || 0} columns) </span>
-                                </div>
-                                <div className="p-4 grid gap-2" style={{ gridTemplateColumns: `repeat(${columns?.length || 1}, minmax(0, 1fr))` }}>
-                                    { (columns || []).map((col: any) => (
-                                        <div key={col.id} className="text-xs font-[Lato-Regular] text-black/60 truncate bg-black/1 p-2 rounded-lg border border-black/4">
-                                            { col.name }
-                                        </div>
-                                    ))}
-                                </div>
+                        { field.type === TemplateComponents.TABLE &&
+                            <div className="w-full rounded-xl border border-black/8 overflow-hidden text-xs">
+                                {/* Header row */}
+                                { (columns?.length ?? 0) > 0 &&
+                                    <div className="flex bg-black/4 border-b border-black/8">
+                                        { (columns || []).map((col: any) => (
+                                            <div key={col.id} className="flex-1 px-3 py-2 font-[Lato-Bold] text-black/60 truncate">
+                                                { col.name }
+                                            </div>
+                                        ))}
+                                    </div>
+                                }
                             </div>
                         }
 

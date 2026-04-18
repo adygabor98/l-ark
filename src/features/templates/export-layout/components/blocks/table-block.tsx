@@ -77,16 +77,16 @@ const TableBlock = ({ block }: TableBlockProps): ReactElement => {
                                     </div>
                                 ))}
                             </div>
-                            {/* Sample data rows */}
                             { [1, 2].map(i => (
-                                <div key={i} className="flex border-b border-sky-100 last:border-0">
-                                    { visibleColumns.map(col => (
-                                        <div key={col.id} className="px-3 py-1.5 text-xs text-sky-400 italic" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
-                                            { col.name } { i }
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
+                                    <div key={i} className="flex border-b border-sky-100 last:border-0">
+                                        { visibleColumns.map(col => (
+                                            <div key={col.id} className="px-3 py-1.5 text-xs text-sky-400 italic" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
+                                                { col.name } { i }
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))
+                            }
                         </>
                     :
                         <>

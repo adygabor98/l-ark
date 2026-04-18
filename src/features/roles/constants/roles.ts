@@ -1,148 +1,64 @@
-import type { Role } from '../types';
+import type {
+	Role
+} from '../types';
+import {
+	UserRole
+} from '@l-ark/types';
 
 export const ROLES: Role[] = [
-  {
-    id: 'dg',
-    name: 'Director General',
-    shortName: 'DG',
-    description:
-      'Full access to the entire system: offices, divisions, users, templates, roles, operations, activity log. All actions including permanent deletion.',
-    permissions: [
-      'activity_log.view',
-      'roles_permissions.view',
-      'roles_permissions.edit',
-      'users.view',
-      'users.create',
-      'users.edit',
-      'users.soft_delete',
-      'users.permanent_delete',
-      'offices.view',
-      'offices.create',
-      'offices.edit',
-      'offices.soft_delete',
-      'offices.permanent_delete',
-      'divisions.view',
-      'divisions.create',
-      'divisions.edit',
-      'divisions.soft_delete',
-      'divisions.permanent_delete',
-      'templates.view',
-      'templates.create',
-      'templates.edit',
-      'templates.soft_delete',
-      'templates.permanent_delete',
-      'operations.view',
-      'operations.create',
-      'operations.edit',
-      'operations.complete',
-      'operations.soft_delete',
-      'operations.permanent_delete',
-    ],
-  },
-  {
-    id: 'sub_dg',
-    name: 'SubDirector General',
-    shortName: 'SubDG',
-    description:
-      'Same as Director General except no permanent deletion and no activity log access.',
-    permissions: [
-      'roles_permissions.view',
-      'roles_permissions.edit',
-      'users.view',
-      'users.create',
-      'users.edit',
-      'users.soft_delete',
-      'offices.view',
-      'offices.create',
-      'offices.edit',
-      'offices.soft_delete',
-      'divisions.view',
-      'divisions.create',
-      'divisions.edit',
-      'divisions.soft_delete',
-      'templates.view',
-      'templates.create',
-      'templates.edit',
-      'templates.soft_delete',
-      'operations.view',
-      'operations.create',
-      'operations.edit',
-      'operations.complete',
-      'operations.soft_delete',
-    ],
-  },
-  {
-    id: 'dg_fin',
-    name: 'Director General Financer',
-    shortName: 'DG Fin',
-    description:
-      'View and edit divisions of type FINANCE. View finance-related templates. View assigned offices and operations within FINANCE divisions.',
-    permissions: [
-      'offices.view',
-      'divisions.view',
-      'divisions.edit',
-      'templates.view',
-      'operations.view',
-    ],
-  },
-  {
-    id: 'dg_immo',
-    name: 'Director General Immobiliari',
-    shortName: 'DG Immo',
-    description:
-      'Same as DG Financer but for REAL_STATE division type. View and edit REAL_STATE divisions, view related templates, offices and operations.',
-    permissions: [
-      'offices.view',
-      'divisions.view',
-      'divisions.edit',
-      'templates.view',
-      'operations.view',
-    ],
-  },
-  {
-    id: 'coord',
-    name: 'Coordinador General',
-    shortName: 'Coord',
-    description:
-      'Office manager. Can create, edit, soft-delete operations and view users within assigned offices.',
-    permissions: [
-      'users.view',
-      'offices.view',
-      'operations.view',
-      'operations.create',
-      'operations.edit',
-      'operations.complete',
-      'operations.soft_delete',
-    ],
-  },
-  {
-    id: 'coord_fin',
-    name: 'Coordinador General Financer',
-    shortName: 'Coord Fin',
-    description:
-      'Same as Coordinador General but restricted to FINANCE divisions. Can also view finance divisions.',
-    permissions: [
-      'users.view',
-      'offices.view',
-      'divisions.view',
-      'operations.view',
-      'operations.create',
-      'operations.edit',
-      'operations.complete',
-      'operations.soft_delete',
-    ],
-  },
-  {
-    id: 'commerciales',
-    name: 'Commerciales',
-    shortName: 'Comm',
-    description:
-      'Basic employee role. Can view and complete operations in assigned offices.',
-    permissions: [
-      'operations.view',
-      'operations.complete',
-    ],
-  },
+	{
+		id: UserRole.DG,
+		name: 'Director General',
+		shortName: 'DG',
+		description: 'Full access to the entire system: offices, divisions, users, templates, roles, operations, activity log and agenda. All actions including permanent deletion.',
+		permissions: {
+			activity_log: { view: true },
+			roles_permissions: { view: true, edit: true },
+			users: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			offices: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			divisions: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			templates: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			operations: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			agenda: { view_all: true, view_mine: false, view_mine_and_sub: false },
+		},
+	},
+	{
+		id: UserRole.DIR,
+		name: 'Director',
+		shortName: 'Dir',
+		description: 'Full access to users, offices, divisions, templates and operations within assigned divisions. Agenda shows all persons below (entire office).',
+		permissions: {
+			users: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			offices: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			divisions: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			templates: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			operations: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			agenda: { view_all: false, view_mine: false, view_mine_and_sub: true },
+		},
+	},
+	{
+		id: UserRole.ADM,
+		name: 'Administratiu/va',
+		shortName: 'Adm',
+		description: 'Administrative role. Manages users, offices, divisions and templates. No access to operations, activity log or roles & permissions. Agenda scoped to assigned office.',
+		permissions: {
+			users: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			offices: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			divisions: { view: true, create: true, edit: true, soft_delete: true, permanent_delete: true },
+			templates: { view: true },
+			agenda: { view_all: false, view_mine: false, view_mine_and_sub: true },
+		},
+	},
+	{
+		id: UserRole.C,
+		name: 'Comercials',
+		shortName: 'Com',
+		description: 'Basic employee role. Can view and complete operations in assigned offices. Agenda shows only own entries.',
+		permissions: {
+			operations: { view: true },
+			agenda: { view_all: false, view_mine: true, view_mine_and_sub: false },
+		},
+	},
 ];
 
 export const ROLES_MAP = new Map(ROLES.map((r) => [r.id, r]));
