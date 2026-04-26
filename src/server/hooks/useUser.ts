@@ -32,7 +32,7 @@ interface useUserResponse {
     logout: () => Promise<number>;
 
     users: UserBasic[];
-    retrieveUsers: () => FetchResult<{ data: Array<UserBasic> }>;
+    retrieveUsers: (variables: { idOffice?: number, $idDivision?: number, role?: string }) => FetchResult<{ data: Array<UserBasic> }>;
 
     user: UserDetail;
     retrieveUserById: (variables: { id: string }) => FetchResult<{ data: UserDetail }>;
@@ -107,7 +107,7 @@ export const useUser = (): useUserResponse => {
         logout: onLogout,
 
         users: usersList?.data ?? [],
-        retrieveUsers: () => retrieveUsers() as FetchResult<{ data: Array<UserBasic> }>,
+        retrieveUsers: (variables: { idOffice?: number, $idDivision?: number, role?: string }) => retrieveUsers({ variables: variables }) as FetchResult<{ data: Array<UserBasic> }>,
 
         user: userData?.data ?? {},
         retrieveUserById: (variables: { id: string }) => retrieveUserById({ variables: variables }) as FetchResult<{ data: UserDetail }>,

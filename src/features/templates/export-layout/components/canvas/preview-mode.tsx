@@ -208,7 +208,7 @@ const SignaturePadPreview = ({ block }: { block: ExportBlock; forPrint?: boolean
     const label = field?.fieldLabel ?? 'Signatura';
 
     return (
-        <div style={{ width, breakInside: 'avoid' }} className="flex flex-col gap-1 py-2">
+        <div style={{ maxWidth: width, width: '100%', breakInside: 'avoid' }} className="flex flex-col gap-1 py-2">
             { role &&
                 <div className="text-[10px] uppercase tracking-widest font-[Lato-Bold] text-black/75 mb-1">
                     { role }
@@ -547,6 +547,7 @@ const FormGridPreview = ({ block }: { block: ExportBlock }): ReactElement => {
 
 // Individual block previews
 const BlockPreview = ({ block, forPrint }: { block: ExportBlock; forPrint?: boolean }): ReactElement | null => {
+    /** Export layout api utilities */
     /** Export layout api utilities */
     const { state } = useExportLayout();
 

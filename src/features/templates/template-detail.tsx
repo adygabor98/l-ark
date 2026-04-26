@@ -139,22 +139,26 @@ const TemplateDetail = (): ReactElement => {
         return obj;
     };
 
-    /** Sanitizes form values for GraphQL submission (strips __typename, sortOrder, temp IDs) */
+    /**
+     * Sanitizes form values for GraphQL submission.
+     *
+     * - Strips `__typename`, `sortOrder`, and the local `id` (both temp `sec-…`/
+     *   `f…` ids and numeric strings — the backend diff-matches by `stableId`,
+     *   not by PK).
+     * - Preserves `stableId` on every section and field; the backend relies on
+     *   it to retain DB rows across DRAFT saves and to inherit identity across
+     *   version bumps. Removing it would orphan every layout token.
+     */
     const sanitizeFormData = (values: any): any => {
         return replaceUndefinedWithNull({
             ...values,
             sections: values.sections?.map((section: any) => {
-                const mappedSection = section.id?.startsWith('sec-')
-                    ? (({ id: _id, __typename, sortOrder, ...rest }) => rest)(section)
-                    : (({ id, __typename, sortOrder, ...rest }) => rest)(section)
+                const { id: _sectionId, __typename: _s__t, sortOrder: _sSort, ...restSection } = section;
                 return {
-                    ...mappedSection,
-                    fields: mappedSection.fields?.map((field: any) => {
-                        const { __typename, sortOrder, id, ...restField } = field;
-                        return {
-                            ...restField,
-                            columns: field.columns
-                        }
+                    ...restSection,
+                    fields: (section.fields ?? []).map((field: any) => {
+                        const { id: _fid, __typename: _f__t, sortOrder: _fSort, ...restField } = field;
+                        return restField;
                     })
                 };
             })

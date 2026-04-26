@@ -39,9 +39,9 @@ export const REFRESH_TOKEN = gql`
 
 export const RETRIEVE_USERS = gql`
     ${USER_LOGIN_FIELDS}
-    
-    query gqlRetrieveUsers($idOffice: ID, $idDivision: ID) {
-        data: gqlRetrieveUsers(idOffice: $idOffice, idDivision: $idDivision) {
+
+    query gqlRetrieveUsers($idOffice: ID, $idDivision: ID, $role: String) {
+        data: gqlRetrieveUsers(idOffice: $idOffice, idDivision: $idDivision, role: $role) {
             ...UserLoginFields
         }
     }

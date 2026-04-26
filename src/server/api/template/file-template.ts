@@ -169,8 +169,8 @@ export const CREATE_FORM_INSTANCE = gql`
 export const SAVE_FORM_INSTANCE = gql`
     ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
 
-    mutation gqlSaveFormInstance($id: ID!, $input: SaveFormInstanceInput!) {
-        data: gqlSaveFormInstance(id: $id, input: $input) {
+    mutation gqlUpdateFormInstance($id: ID!, $input: SaveFormInstanceInput!) {
+        data: gqlUpdateFormInstance(id: $id, input: $input) {
             ...FileTemplateApiGenericResponse
         }
     }
@@ -179,8 +179,8 @@ export const SAVE_FORM_INSTANCE = gql`
 export const SUBMIT_FORM_INSTANCE = gql`
     ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
 
-    mutation gqlSubmitFormInstance($id: ID!) {
-        data: gqlSubmitFormInstance(id: $id) {
+    mutation gqlPublishFormInstance($id: ID!) {
+        data: gqlPublishFormInstance(id: $id) {
             ...FileTemplateApiGenericResponse
         }
     }

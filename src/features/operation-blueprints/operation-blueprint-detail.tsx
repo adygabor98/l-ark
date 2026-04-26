@@ -105,8 +105,9 @@ const OperationBlueprintDetail = (): ReactElement => {
                             position: s.position as { x: number; y: number },
                             stepType: s.stepType ?? 'STANDARD',
                             waitForLinkedType: s.waitForLinkedType ?? undefined,
-                            openBlueprintId: s.openBlueprintId?.toString() ?? undefined,
-                            conditionalVisibility: (s.conditionalVisibility ?? 'always') as ConditionalVisibility
+                            openBlueprintIds: (s as any).openBlueprintIds?.map((id: string | number) => id.toString()) ?? undefined,
+                            conditionalVisibility: (s.conditionalVisibility ?? 'always') as ConditionalVisibility,
+                            allowInstanceLink: s.allowInstanceLink ?? false
                         })),
                         edges: blueprint.edges.map(e => ({
                             id: e.id.toString(),
@@ -130,7 +131,13 @@ const OperationBlueprintDetail = (): ReactElement => {
     /** Manage to publish an operation blueprint */
     const onPublish = async (): Promise<void> => {
         let values = methods.getValues();        
-        values.steps = values.steps.map(step => ({...step, conditionalVisibility: ( (step.conditionalVisibility as any) == 'always' ? null : step.conditionalVisibility) as ConditionalVisibility }));
+
+        values.steps = values.steps.map(step => ({
+            ...step,
+            conditionalVisibility: ( (step.conditionalVisibility as any) == 'always' ? null : step.conditionalVisibility) as ConditionalVisibility,
+            expectedDocuments: typeof step.expectedDocuments === 'string' ? (step.expectedDocuments as string).split(',').map(s => s.trim()).filter(Boolean) : step.expectedDocuments,
+            notificationPersons: typeof step.notificationPersons === 'string' ? (step.notificationPersons as string).split(',').map(s => s.trim()).filter(Boolean) : step.notificationPersons
+        }));
 
         try {
             const response: FetchResult<{ data: ApiResponse }> = await updateOperationBlueprint({ id: state.id, input: {...values, publish: true } });
@@ -146,8 +153,14 @@ const OperationBlueprintDetail = (): ReactElement => {
 
     /** Manage to create or update an operation blueprint */
     const onSaveDraft = async (): Promise<void> => {
-        let values = methods.getValues();        
-        values.steps = values.steps.map(step => ({...step, conditionalVisibility: ( (step.conditionalVisibility as any) == 'always' ? null : step.conditionalVisibility) as ConditionalVisibility }));
+        let values = methods.getValues();    
+
+        values.steps = values.steps.map(step => ({
+            ...step,
+            conditionalVisibility: ( (step.conditionalVisibility as any) == 'always' ? null : step.conditionalVisibility) as ConditionalVisibility,
+            expectedDocuments: typeof step.expectedDocuments === 'string' ? (step.expectedDocuments as string).split(',').map(s => s.trim()).filter(Boolean) : step.expectedDocuments,
+            notificationPersons: typeof step.notificationPersons === 'string' ? (step.notificationPersons as string).split(',').map(s => s.trim()).filter(Boolean) : step.notificationPersons
+        }));
 
         try {
             if ( state?.id ) {

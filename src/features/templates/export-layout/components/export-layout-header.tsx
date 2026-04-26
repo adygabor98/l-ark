@@ -3,8 +3,10 @@ import {
     useEffect,
     useRef,
     useCallback,
+    useMemo,
     type ReactElement
 } from 'react';
+import { flushSync } from 'react-dom';
 import {
     useNavigate
 } from 'react-router-dom';
@@ -45,6 +47,7 @@ import type {
 } from '@l-ark/types';
 import Button from '../../../../shared/components/button';
 import { useTranslation } from 'react-i18next';
+import { collectLayoutIssues } from '../utils/layout-reconciliation';
 
 // Keyboard shortcuts popover
 const SHORTCUTS = [
@@ -94,12 +97,10 @@ const ExportLayoutHeader = (): ReactElement => {
     const [showShortcuts, setShowShortcuts] = useState<boolean>(false);
     /** State to manage the last selected token */
     const lastSelectedRef = useRef<string | null>(null);
-    /** Reference for the auto-saving functionallity */
-    const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     /** Manage to count the number of blocks */
     const blockCount = state.rows.reduce((sum, row) => sum + row.cells.length, 0);
     /** Toast api utilities */
-    const { onToast, onPromiseToast } = useToast();
+    const { onToast, onConfirmationToast, onPromiseToast } = useToast();
     const { t } = useTranslation();
     /** Generate a real PDF file using html-to-image + jsPDF.
      *  html-to-image uses the browser's native CSS engine (supports oklab, etc.)
@@ -176,36 +177,86 @@ const ExportLayoutHeader = (): ReactElement => {
         });
     };
 
+    /** Reconciliation summary — blocks save when orphaned/incompatible tokens remain */
+    const issueSummary = useMemo(
+        () => collectLayoutIssues(state.rows, state.pageConfig),
+        [state.rows, state.pageConfig]
+    );
+    const hasUnresolvedIssues = issueSummary.issues.length > 0;
+
     /** Manage to save the export layout of the file template */
     const handleSave = useCallback(async () => {
         if (saving) return;
 
+        if (hasUnresolvedIssues) {
+            onToast({
+                message: `Cannot save: ${issueSummary.issues.length} token reference${issueSummary.issues.length === 1 ? '' : 's'} no longer resolve. Fix or clear them first.`,
+                type: 'error'
+            });
+            return;
+        }
+
         const layoutData: JSON = { rows: state.rows, pageConfig: state.pageConfig } as unknown as JSON;
 
-        if (state.versionId) {
-            setSaving(true);
-            setSaveStatus('saving');
-
-            try {
-                const response: FetchResult<{ data: ApiResponse<number> }> = await savefileTemplateExportLayout({ templateVersionId: Number(state.versionId), input: { layoutData } });
-
-                if ( response?.data?.data.success ) {
-                    dispatch({ type: 'MARK_CLEAN' });
-                    setSaveStatus('saved');
-                } else {
-                    setSaveStatus('error');
-                }
-                onToast({ message: getResponseMessage(response?.data?.data), type: response?.data?.data.success ? 'success' : 'error' });
-            } catch {
-                setSaveStatus('error');
-            } finally {
-                setSaving(false);
-            }
-        } else {
+        if (!state.versionId) {
             dispatch({ type: 'MARK_CLEAN' });
             setSaveStatus('saved');
+            return;
         }
-    }, [saving, state.rows, state.pageConfig, state.versionId, savefileTemplateExportLayout, dispatch]);
+
+        setSaving(true);
+        setSaveStatus('saving');
+
+        try {
+            const response: FetchResult<{ data: ApiResponse<number> }> = await savefileTemplateExportLayout({
+                templateVersionId: Number(state.versionId),
+                input: { layoutData },
+            });
+
+            // Published version guard: ask the user before creating a new draft
+            if (!response?.data?.data.success && response?.data?.data.message === 'PUBLISHED_VERSION_LOCKED') {
+                setSaving(false);
+                setSaveStatus('idle');
+
+                const { confirmed } = await onConfirmationToast({
+                    title: 'Template is published',
+                    description: 'Saving will create a new draft version. You\'ll need to publish it for the changes to take effect.',
+                    actionText: 'Create new version',
+                    cancelText: 'Cancel',
+                });
+
+                if (!confirmed) return;
+
+                setSaving(true);
+                setSaveStatus('saving');
+
+                try {
+                    const forced: FetchResult<{ data: ApiResponse<number> }> = await savefileTemplateExportLayout({
+                        templateVersionId: Number(state.versionId),
+                        input: { layoutData, forceNewVersion: true },
+                    });
+                    flushSync(() => dispatch({ type: 'MARK_CLEAN' }));
+                    onToast({ message: getResponseMessage(forced?.data?.data), type: 'success' });
+                    navigate('/templates');
+                } finally {
+                    setSaving(false);
+                }
+                return;
+            }
+
+            if (response?.data?.data.success) {
+                dispatch({ type: 'MARK_CLEAN' });
+                setSaveStatus('saved');
+            } else {
+                setSaveStatus('error');
+            }
+            onToast({ message: getResponseMessage(response?.data?.data), type: response?.data?.data.success ? 'success' : 'error' });
+        } catch {
+            setSaveStatus('error');
+        } finally {
+            setSaving(false);
+        }
+    }, [saving, hasUnresolvedIssues, issueSummary.issues.length, onToast, onConfirmationToast, navigate, state.rows, state.pageConfig, state.versionId, savefileTemplateExportLayout, dispatch]);
 
     /** Register save callback for keyboard shortcut (Ctrl+S) in context */
     useEffect(() => {
@@ -215,19 +266,6 @@ const ExportLayoutHeader = (): ReactElement => {
         };
     }, [handleSave, saveCallbackRef]);
 
-    /** Auto-save: debounce 3s after last change */
-    useEffect(() => {
-        if (!state.isDirty) return;
-
-        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = setTimeout(() => {
-            handleSave();
-        }, 3000);
-
-        return () => {
-            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-        };
-    }, [state.isDirty, handleSave]);
 
     /** Clear "saved" status after 3s  */
     useEffect(() => {
@@ -308,7 +346,12 @@ const ExportLayoutHeader = (): ReactElement => {
                     {t('export-layout.export-pdf')}
                 </Button>
 
-                <Button variant='primary' onClick={handleSave} disabled={saving} >
+                <Button
+                    variant='primary'
+                    onClick={handleSave}
+                    disabled={saving || hasUnresolvedIssues}
+                    title={hasUnresolvedIssues ? 'Resolve layout issues before saving' : undefined}
+                >
                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     {saving ? t('export-layout.saving') : (
                         <span className="flex items-center gap-1.5">

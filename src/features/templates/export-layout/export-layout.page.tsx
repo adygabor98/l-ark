@@ -63,12 +63,12 @@ const ExportLayoutInner = (): ReactElement => {
                 const response: FetchResult<{ data: FileTemplateExportLayout }> = await retrieveFileTemplateExportLayout({ templateVersionId: Number(state.versionId) })
                 if( response ) {
                     const layout = (response as any)?.data?.data;
-                    console.log(layout)
+
                     if (layout?.layoutData) {
                         const data = typeof layout.layoutData === 'string'
                             ? JSON.parse(layout.layoutData)
                             : layout.layoutData;
-                        console.log(data);
+
                         if (data.rows && data.pageConfig) {
                             dispatch({
                                 type: 'LOAD_LAYOUT',
@@ -279,12 +279,18 @@ export default function ExportLayoutPage(): ReactElement {
                     return;
                 }
 
+                /**
+                 * The designer resolves layout tokens via `stableId`, not the
+                 * numeric PK. We therefore pass `stableId` as the public `id`
+                 * on every token-producing field/section — that's what gets
+                 * written into the layout JSON and read at render time.
+                 */
                 const version = tmpl.versions?.[0];
                 const sections = (version?.sections ?? []).map((s: any) => ({
-                    id: String(s.id),
+                    id: String(s.stableId ?? s.id),
                     title: s.title,
                     fields: (s.fields ?? []).map((f: any) => ({
-                        id: String(f.id),
+                        id: String(f.stableId ?? f.id),
                         label: f.label,
                         type: f.type,
                         options: f.options,

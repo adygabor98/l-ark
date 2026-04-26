@@ -30,7 +30,8 @@ import type {
     FileTemplateSummary,
     FileTemplateInput,
     FileTemplateExportLayout,
-    FileTemplateExportLayoutInput
+    FileTemplateExportLayoutInput,
+    FileTemplateInstance
 } from "@l-ark/types";
 
 interface FormFieldValueInput {
@@ -39,8 +40,8 @@ interface FormFieldValueInput {
 }
 
 interface CreateFormInstanceInput {
-    templateId: string;
-    stepInstanceId: string;
+    templateId: number;
+    stepInstanceId: number;
     fieldValues?: FormFieldValueInput[];
 }
 
@@ -65,11 +66,12 @@ interface useFileTemplateResponse {
 
     savefileTemplateExportLayout: (variables: { templateVersionId: number, input: FileTemplateExportLayoutInput }) => FetchResult<{ data: ApiResponse<number> }>;
 
-    formInstance: any;
-    retrieveFormInstance: (variables: { id: number }) => FetchResult<{ data: any }>;
+    formInstance: FileTemplateInstance;
+    retrieveFormInstanceById: (variables: { id: number }) => FetchResult<{ data: FileTemplateInstance }>;
+    
     createFormInstance: (variables: { input: CreateFormInstanceInput }) => FetchResult<{ data: ApiResponse<number> }>;
-    saveFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => FetchResult<{ data: ApiResponse<number> }>;
-    submitFormInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse<number> }>;
+    updateFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => FetchResult<{ data: ApiResponse<number> }>;
+    publishFormInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse<number> }>;
     removeFormInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse<number> }>;
 }
 
@@ -99,18 +101,18 @@ export const useFileTemplate = (): useFileTemplateResponse => {
     const [ deleteFileTemplate ] = useMutationWithToast(DELETE_FILE_TEMPLATE, { refetchQueries: ['gqlRetrieveFileTemplates'] });
 
     /** Manage to create a new export file template */
-    const [savefileTemplateExportLayout] = useMutationWithToast(SAVE_FILE_TEMPLATE_EXPORT_LAYOUT, { refetchQueries: ['gqlRetrieveFileTemplateById'] });
+    const [ savefileTemplateExportLayout ] = useMutationWithToast(SAVE_FILE_TEMPLATE_EXPORT_LAYOUT, { refetchQueries: ['gqlRetrieveFileTemplateById'] });
 
     /** Retrieve a form instance by ID */
-    const [retrieveFormInstance, { data: formInstanceData }] = useLazyQueryWithToast(RETRIEVE_FORM_INSTANCE, { fetchPolicy: 'network-only' });
+    const [ retrieveFormInstanceById, { data: formInstanceData } ] = useLazyQueryWithToast(RETRIEVE_FORM_INSTANCE, { fetchPolicy: 'network-only' });
     /** Create a new form instance */
-    const [createFormInstance] = useMutationWithToast(CREATE_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    const [ createFormInstance ] = useMutationWithToast(CREATE_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
     /** Save field values for a form instance */
-    const [saveFormInstance] = useMutationWithToast(SAVE_FORM_INSTANCE);
+    const [ updateFormInstance ] = useMutationWithToast(SAVE_FORM_INSTANCE, { refetchQueries : ['gqlRetrieveInstanceById']});
     /** Submit a form instance */
-    const [submitFormInstance] = useMutationWithToast(SUBMIT_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    const [ publishFormInstance ] = useMutationWithToast(SUBMIT_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
     /** Remove a form instance */
-    const [removeFormInstance] = useMutationWithToast(REMOVE_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    const [ removeFormInstance ] = useMutationWithToast(REMOVE_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
 
     return {
         fileTemplates: fileTemplatesData?.data ?? [],
@@ -134,10 +136,11 @@ export const useFileTemplate = (): useFileTemplateResponse => {
         savefileTemplateExportLayout: (variables: { templateVersionId: number, input: FileTemplateExportLayoutInput }) => savefileTemplateExportLayout({ variables: variables }) as FetchResult<{ data: ApiResponse<number> }>,
 
         formInstance: formInstanceData?.data ?? null,
-        retrieveFormInstance: (variables: { id: number }) => retrieveFormInstance({ variables }) as FetchResult<{ data: any }>,
+        retrieveFormInstanceById: (variables: { id: number }) => retrieveFormInstanceById({ variables }) as FetchResult<{ data: FileTemplateInstance }>,
+
         createFormInstance: (variables: { input: CreateFormInstanceInput }) => createFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
-        saveFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => saveFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
-        submitFormInstance: (variables: { id: number }) => submitFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
+        updateFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => updateFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
+        publishFormInstance: (variables: { id: number }) => publishFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
         removeFormInstance: (variables: { id: number }) => removeFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>
     }
 }

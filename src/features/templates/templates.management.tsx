@@ -60,12 +60,7 @@ const TemplateManagement = (): ReactElement => {
 
     useEffect(() => {
         retrieveFileTemplates();
-    }, []);
-
-    useEffect(() => {
-        console.log(fileTemplates);
-    }, [fileTemplates]);
-    
+    }, []);    
 
     const getStatusColor = (status: string) => {
         switch (status) {

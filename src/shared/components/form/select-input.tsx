@@ -25,11 +25,11 @@ import {
 import {
     RETRIEVE_FILE_TEMPLATES
 } from "../../../server/api/template/file-template";
-import { RETRIEVE_BLUEPRINTS } from "../../../server/api/operation/operation.queries";
 import {
     ConditionalVisibility,
     StepType
 } from '@l-ark/types';
+import { RETRIEVE_OPERATION_BLUEPRINTS } from "../../../server/api/operation/operation-blueprint.queries";
 
 const { Option } = Select;
 
@@ -58,7 +58,7 @@ const getRequestQuery = (type: string | undefined): DocumentNode => {
         case 'offices': return RETRIEVE_OFFICES;
         case 'divisions': return RETRIEVE_DIVISIONS;
         case 'file-templates': return RETRIEVE_FILE_TEMPLATES;
-        case 'blueprints': return RETRIEVE_BLUEPRINTS;
+        case 'blueprints': return RETRIEVE_OPERATION_BLUEPRINTS;
         default: return gql`query empty { __emtpy }`
     }
 }
@@ -88,6 +88,17 @@ const SelectInput = (props: PropTypes) => {
                 }
             }
         }
+        // File-template fields pass their options array directly via `params`
+        // ({ label, value, isDefault }[]). When we see that shape, short-circuit
+        // the GraphQL path and render the options as-is.
+        if ( Array.isArray(params) ) {
+            const statics: Element[] = (params as Array<{ label: string; value: unknown }>)
+                .filter((o) => o && o.label !== undefined && o.value !== undefined)
+                .map((o) => ({ value: String(o.value), label: o.label }));
+            setElements(statics);
+            return;
+        }
+        
         if( type === 'blueprint-step-types' ) {
             setElements([
                 { value: StepType.STANDARD, label: 'Standard' },
@@ -101,6 +112,14 @@ const SelectInput = (props: PropTypes) => {
                 { value: 'always', label: 'Always' },
                 { value: ConditionalVisibility.LINKED_ONLY, label: 'Only when launched by another operation' },
                 { value: ConditionalVisibility.STANDALONE_ONLY, label: ' Only when opened standalone' }
+            ]);
+        } else if( type === 'expiry-hours' ) {
+            setElements([
+                { value: '6', label: '6 hours' },
+                { value: '24', label: '24 hours' },
+                { value: '72', label: '3 days' },
+                { value: '168', label: '1 week' },
+                { value: '', label: 'Permanent' }
             ]);
         } else {
             initialize();

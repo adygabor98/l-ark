@@ -3,6 +3,7 @@ import {
     useState,
     useEffect,
     useId,
+    useMemo,
     Fragment,
     memo,
     useCallback,
@@ -12,7 +13,6 @@ import {
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
     useSensor,
     useSensors,
@@ -22,16 +22,11 @@ import {
     DragOverlay
 } from '@dnd-kit/core';
 import {
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-    arrayMove,
-    useSortable
+    arrayMove
 } from '@dnd-kit/sortable';
 import {
-    CSS
-} from '@dnd-kit/utilities';
-import {
+    ChevronUp,
+    ChevronDown,
     GripVertical,
     Trash2,
     Plus,
@@ -43,7 +38,8 @@ import {
     Copy,
     ZoomIn,
     ZoomOut,
-    Maximize
+    Maximize,
+    AlertTriangle
 } from 'lucide-react';
 import {
     useExportLayout
@@ -81,6 +77,7 @@ import {
     CELL_MIN_WIDTH_PCT
 } from '../../export-layout.constants';
 import Button from '../../../../../shared/components/button';
+import { blockHasIssue, collectLayoutIssues, type LayoutReconciliationSummary } from '../../utils/layout-reconciliation';
 
 const SLASH_MENU_EVENT = 'slash-menu-open';
 const MENU_HEIGHT = 320;
@@ -358,6 +355,7 @@ const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
     const { state, dispatch } = useExportLayout();
     const [confirmDelete, setConfirmDelete] = useState(false);
     const isSelected = state.selectedBlockId === cell.block.id;
+    const hasIssue = blockHasIssue(cell.block);
     const marginBottom = cell.block.settings.marginBottom ?? 0;
     const s = cell.block.settings;
 
@@ -399,12 +397,20 @@ const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
             onClick={e => { e.stopPropagation(); dispatch({ type: 'SELECT_BLOCK', payload: { id: cell.block.id } }); }}
         >
             <div className={`h-full rounded-xl transition-all ${
+                    hasIssue ? 'ring-2 ring-red-400 ring-offset-1 bg-red-50/40' :
                     isOver ? 'ring-2 ring-amber-400 ring-offset-1 bg-amber-50/30' :
                     isSelected ? 'ring-2 ring-amber-400 ring-offset-1' : 'ring-1 ring-transparent hover:ring-black/8'
                 }`}
             >
                 {children}
             </div>
+
+            { hasIssue &&
+                <div className="absolute top-1 left-1 z-20 flex items-center gap-1 bg-red-500 text-white text-[10px] font-[Lato-Bold] px-1.5 py-0.5 rounded-md shadow-sm pointer-events-none">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Review</span>
+                </div>
+            }
 
             {/* Per-cell action buttons (top-right corner) */}
             <div className="absolute -top-7 right-1 flex gap-0.5 opacity-0 group-hover/cell:opacity-100 transition-opacity z-20">
@@ -442,14 +448,18 @@ const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
     );
 }
 
-// Sortable row
+// Row
 interface SortableRowProps {
     row: ExportRow;
     pageWidth: number;
     scale: number;
+    isFirst: boolean;
+    isLast: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
 }
 
-const SortableRow = memo(function SortableRow({ row, pageWidth, scale }: SortableRowProps): ReactElement {
+const SortableRow = memo(function SortableRow({ row, pageWidth, scale, isFirst, isLast, onMoveUp, onMoveDown }: SortableRowProps): ReactElement {
     const { dispatch } = useExportLayout();
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [addMenuPos, setAddMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -472,10 +482,6 @@ const SortableRow = memo(function SortableRow({ row, pageWidth, scale }: Sortabl
         setShowAddMenu(true);
     };
 
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: row.id });
-
-    const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 };
-
     const handleInsertAfter = (type: BlockType) => {
         dispatch({ type: 'ADD_ROW', payload: { blockType: type, afterRowId: row.id } });
         setShowAddMenu(false);
@@ -491,13 +497,26 @@ const SortableRow = memo(function SortableRow({ row, pageWidth, scale }: Sortabl
     };
 
     return (
-        <div ref={setNodeRef} style={style} className={`group/row relative rounded-lg transition-colors hover:bg-amber-50/30 ${isDragging ? 'z-50' : ''}`}>
+        <div className="group/row relative rounded-lg transition-colors hover:bg-amber-50/30">
             <div className="flex items-start gap-1.5">
-                {/* Row drag handle */}
-                <div {...attributes} {...listeners}
-                    className="shrink-0 mt-2 opacity-0 group-hover/row:opacity-100 cursor-grab active:cursor-grabbing text-black/25 hover:text-black/50 transition-opacity"
-                >
-                    <GripVertical className="w-4 h-4" />
+                {/* Row move up/down buttons */}
+                <div className="shrink-0 mt-1.5 flex flex-col gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                    <button
+                        onClick={e => { e.stopPropagation(); onMoveUp(); }}
+                        disabled={isFirst}
+                        title="Move row up"
+                        className="p-0.5 rounded text-black/25 hover:text-black/60 hover:bg-black/5 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                        onClick={e => { e.stopPropagation(); onMoveDown(); }}
+                        disabled={isLast}
+                        title="Move row down"
+                        className="p-0.5 rounded text-black/25 hover:text-black/60 hover:bg-black/5 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
                 </div>
 
                 {/* Cells in a row */}
@@ -644,6 +663,31 @@ const Tip = ({ icon, label }: { icon: ReactElement; label: string }): ReactEleme
     );
 }
 
+// Reconciliation banner — surfaces orphan/incompatible tokens and offers a bulk-clear
+const ReconciliationBanner = ({ summary }: { summary: LayoutReconciliationSummary }): ReactElement | null => {
+    const { dispatch } = useExportLayout();
+    if (summary.issues.length === 0) return null;
+
+    const parts: string[] = [];
+    if (summary.orphanedCount > 0) parts.push(`${summary.orphanedCount} removed`);
+    if (summary.incompatibleCount > 0) parts.push(`${summary.incompatibleCount} type-mismatched`);
+
+    return (
+        <div className="w-full max-w-3xl mx-auto flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 shadow-sm">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            <div className="flex-1 flex flex-col">
+                <span className="text-sm font-[Lato-Bold]"> Layout references need review </span>
+                <span className="text-xs font-[Lato-Regular] text-red-700/80">
+                    { parts.join(' · ') } token{ summary.issues.length === 1 ? '' : 's' } no longer resolve in this template version. Fix or clear them before saving.
+                </span>
+            </div>
+            <Button variant="danger" onClick={() => dispatch({ type: 'CLEAN_ORPHANS' })}>
+                Clear all references
+            </Button>
+        </div>
+    );
+};
+
 // Zoom controls
 const ZoomControls = ({ scale, onZoomIn, onZoomOut, onFit }: { scale: number; onZoomIn: () => void; onZoomOut: () => void; onFit: () => void;}): ReactElement => {
     return (
@@ -741,11 +785,10 @@ const BlockCanvas = (): ReactElement => {
     }, []);
 
     const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
     );
 
-    // Unified drag start handler
+    // Drag handler for block-to-block moves only (rows are reordered via up/down buttons)
     const handleDragStart = useCallback((event: { active: { id: string | number } }) => {
         const activeId = String(event.active.id);
         if (activeId.startsWith('block-')) {
@@ -753,31 +796,29 @@ const BlockCanvas = (): ReactElement => {
         }
     }, []);
 
-    // Unified drag end handler — differentiates row reorder vs block move by ID prefix
     const handleDragEnd = useCallback((event: DragEndEvent) => {
         const { active, over } = event;
         setDraggingBlockId(null);
-        
+
         if (!over || active.id === over.id) return;
 
         const activeId = String(active.id);
-
         if (activeId.startsWith('block-')) {
-            // Block move between cells
             const sourceCellId = active.data.current?.sourceCellId as string | undefined;
             const targetCellId = (over.data.current?.targetCellId ?? String(over.id).replace('cell-', '')) as string;
             if (sourceCellId && targetCellId && sourceCellId !== targetCellId) {
                 dispatch({ type: 'MOVE_BLOCK', payload: { fromCellId: sourceCellId, toCellId: targetCellId } });
             }
-        } else {
-            // Row reorder (sortable)
-            const oldIdx = state.rows.findIndex(r => r.id === activeId);
-            const newIdx = state.rows.findIndex(r => r.id === String(over.id));
-            if (oldIdx >= 0 && newIdx >= 0) {
-                const reordered = arrayMove(state.rows, oldIdx, newIdx);
-                dispatch({ type: 'REORDER_ROWS', payload: { newOrder: reordered.map(r => r.id) } });
-            }
         }
+    }, [dispatch]);
+
+    const handleMoveRow = useCallback((rowId: string, direction: 'up' | 'down') => {
+        const idx = state.rows.findIndex(r => r.id === rowId);
+        if (idx < 0) return;
+        const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+        if (targetIdx < 0 || targetIdx >= state.rows.length) return;
+        const reordered = arrayMove(state.rows, idx, targetIdx);
+        dispatch({ type: 'REORDER_ROWS', payload: { newOrder: reordered.map(r => r.id) } });
     }, [state.rows, dispatch]);
 
     const handleAddBlock = (type: BlockType) => {
@@ -818,8 +859,16 @@ const BlockCanvas = (): ReactElement => {
     const pageBoundaryCount = Math.floor(paperHeight / pageHeightPx);
     const pageBoundaries    = Array.from({ length: pageBoundaryCount }, (_, i) => (i + 1) * pageHeightPx);
 
+    const issueSummary = useMemo(
+        () => collectLayoutIssues(state.rows, state.pageConfig),
+        [state.rows, state.pageConfig]
+    );
+
     return (
         <div ref={canvasRef} className="h-full flex-1 overflow-auto bg-transparent flex flex-col items-center py-5 px-2 gap-3" onClick={() => dispatch({ type: 'SELECT_BLOCK', payload: { id: null } })}>
+            {/* Reconciliation banner (cross-version token issues) */}
+            <ReconciliationBanner summary={issueSummary} />
+
             {/* Zoom controls */}
             <ZoomControls
                 scale={scale}
@@ -901,27 +950,27 @@ const BlockCanvas = (): ReactElement => {
                                     onDragStart={handleDragStart}
                                     onDragEnd={handleDragEnd}
                                 >
-                                    <SortableContext items={state.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                                        <div className="flex flex-col gap-5 py-2">
-                                            { state.rows.map(row => (
-                                                <SortableRow
-                                                    key={row.id}
-                                                    row={row}
-                                                    pageWidth={pageWidth}
-                                                    scale={scale}
-                                                />
-                                            )) }
-                                        </div>
-                                    </SortableContext>
+                                    <div className="flex flex-col gap-5 py-2">
+                                        { state.rows.map((row, idx) => (
+                                            <SortableRow
+                                                key={row.id}
+                                                row={row}
+                                                pageWidth={pageWidth}
+                                                scale={scale}
+                                                isFirst={idx === 0}
+                                                isLast={idx === state.rows.length - 1}
+                                                onMoveUp={() => handleMoveRow(row.id, 'up')}
+                                                onMoveDown={() => handleMoveRow(row.id, 'down')}
+                                            />
+                                        )) }
+                                    </div>
                                     {/* Ghost overlay shown while dragging a block */}
-                                    <DragOverlay>
-                                        { draggingBlockId ?
+                                    <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
+                                        { draggingBlockId ? (
                                             <div className="bg-white border-2 border-amber-400 rounded-xl shadow-xl px-4 py-3 text-xs text-amber-700 font-medium opacity-90 pointer-events-none">
                                                 Moving block…
                                             </div>
-                                        :
-                                            null
-                                        }
+                                        ) : null }
                                     </DragOverlay>
                                 </DndContext>
                             }

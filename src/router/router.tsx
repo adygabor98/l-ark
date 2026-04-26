@@ -45,10 +45,9 @@ import ExportLayoutPage from "../features/templates/export-layout/export-layout.
 
 import OperationBlueprintsManagement from "../features/operation-blueprints/operation-blueprints-management";
 import OperationBlueprintDetail from "../features/operation-blueprints/operation-blueprint-detail";
-
-import WorkspaceManagement from "../features/workspace/workspace.management";
-import WorkspaceNew from "../features/workspace/workspace-new";
-import WorkspaceDetail from "../features/workspace/workspace-detail";
+import MyWorkspaceManagement from "../features/my-workspace/my-workspace-management";
+import MyWorkspaceNewInstance from "../features/my-workspace/my-workspace-new-instance";
+import MyWorkspaceDetail from "../features/my-workspace/my-workspace-detail";
 
 // Component to initialize global navigation and token expiration monitoring
 const NavigationInitializer = () => {
@@ -261,7 +260,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<WorkspaceManagement />
+										<MyWorkspaceManagement />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -273,7 +272,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<WorkspaceNew />
+										<MyWorkspaceNewInstance />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -285,7 +284,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<WorkspaceDetail />
+										<MyWorkspaceDetail />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>

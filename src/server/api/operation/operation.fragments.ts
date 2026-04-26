@@ -84,7 +84,7 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
 
             stepType
             waitForLinkedType
-            openBlueprintId
+            openBlueprintIds
             conditionalVisibility
             allowInstanceLink
             notificationPersons
@@ -126,8 +126,6 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
     }
 `;
 
-// ─── Instance Fragments ────────────────────────────────────────
-
 export const INSTANCE_SUMMARY_FIELDS = gql`
     fragment InstanceSummaryFields on OperationInstance {
         id
@@ -141,6 +139,7 @@ export const INSTANCE_SUMMARY_FIELDS = gql`
             title
             type
             subType
+            maxGlobalOperations
         }
 
         officeId
@@ -273,7 +272,11 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 allowDocumentUpload
                 stepType
                 waitForLinkedType
-                openBlueprintId
+                openBlueprintIds
+                openBlueprints {
+                    id
+                    title
+                }
                 conditionalVisibility
                 allowInstanceLink
                 notificationPersons

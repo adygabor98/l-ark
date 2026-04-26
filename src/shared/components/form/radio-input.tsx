@@ -17,18 +17,21 @@ interface PropTypes {
     field: any;
     disabled?: boolean;
     dataType: string;
+    params?: { value: any; label: string; isDefault?: boolean }[];
 }
 
 const RadioField = (props: PropTypes) => {
     /** Retrieve component properties */
-    const { field, disabled, dataType } = props;
+    const { field, disabled, dataType, params } = props;
     /** Translation utilities */
     const { t } = useTranslation();
     /** State to manage the options */
     const [options, setOptions] = useState<{ value: any, label: string }[]>([]);
 
     useEffect(() => {
-        if( dataType === 'operation-category' ) {
+        if (params && params.length > 0) {
+            setOptions(params.map(p => ({ value: p.value, label: p.label })));
+        } else if( dataType === 'operation-category' ) {
             setOptions([
                 { label: 'Global', value: OperationType.GLOBAL },
                 { label: 'Other', value: OperationType.OTHER }
@@ -39,7 +42,7 @@ const RadioField = (props: PropTypes) => {
                 { value: false, label: t('labels.no') }
             ]);
         }
-    }, [dataType]);
+    }, [dataType, params]);
     
     
     return (

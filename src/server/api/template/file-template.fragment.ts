@@ -49,12 +49,14 @@ export const FILE_TEMPLATE_DETAIL = gql`
 
             sections {
                 id
+                stableId
                 title
                 description
                 sortOrder
 
                 fields {
                     id
+                    stableId
                     type
                     label
                     required
@@ -154,11 +156,13 @@ export const FORM_INSTANCE_DETAIL = gql`
             versionNumber
             sections {
                 id
+                stableId
                 title
                 description
                 sortOrder
                 fields {
                     id
+                    stableId
                     type
                     label
                     required
@@ -176,6 +180,7 @@ export const FORM_INSTANCE_DETAIL = gql`
         fieldValues {
             id
             fieldId
+            stableFieldId
             value
         }
     }

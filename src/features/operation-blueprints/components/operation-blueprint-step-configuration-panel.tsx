@@ -78,13 +78,13 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 
     useEffect(() => {
         const timer = setTimeout(() => {
-            const { title, description, stepType, waitForLinkedType, openBlueprintId, notificationPersons, conditionalVisibility, isBlocking, isRequired, allowDocumentUpload, allowInstanceLink, expectedDocuments } = formValues;
+            const { title, description, stepType, waitForLinkedType, openBlueprintIds, notificationPersons, conditionalVisibility, isBlocking, isRequired, allowDocumentUpload, allowInstanceLink, expectedDocuments } = formValues;
             onUpdate(step.id, {
                 title,
                 description,
                 stepType,
                 waitForLinkedType,
-                openBlueprintId,
+                openBlueprintIds,
                 notificationPersons,
                 conditionalVisibility,
                 isBlocking,
@@ -257,11 +257,11 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                 <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Step Type </label>
                 <Field control={control} name='stepType' type='select' dataType='blueprint-step-types' required />
 
-				{/* Open Blueprint — only when stepType is OPEN_OPERATION */}
+				{/* Open Blueprints — only when stepType is OPEN_OPERATION */}
 				{ stepType === StepTypeEnum.OPEN_OPERATION &&
                     <>
-                        <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Which blueprint will open? </label>
-                        <Field control={control} name='openBlueprintId' type='select' dataType='blueprints' required />
+                        <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Which blueprints can open? </label>
+                        <Field control={control} name='openBlueprintIds' type='select' dataType='blueprints' multiple required />
                     </>
                 }
 

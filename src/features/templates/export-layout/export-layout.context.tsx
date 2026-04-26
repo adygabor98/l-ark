@@ -15,6 +15,7 @@ import {
     setRenderIntent as setModuleRenderIntent,
     type RenderIntent,
 } from './utils/render-intent';
+import { stripLayoutIssues } from './utils/layout-reconciliation';
 import {
     v4 as uuidv4
 } from 'uuid';
@@ -163,6 +164,7 @@ type Action =
     | { type: 'MARK_CLEAN' }
     | { type: 'SET_LOADING'; payload: boolean }
     | { type: 'ADD_TWO_COLUMN_ROW' }
+    | { type: 'CLEAN_ORPHANS' }
 
 // Block factory
 
@@ -466,6 +468,11 @@ function coreReducer(state: ExportLayoutState, action: Action): ExportLayoutStat
         case 'SET_LOADING':
             return { ...state, isLoading: action.payload };
 
+        case 'CLEAN_ORPHANS': {
+            const cleaned = stripLayoutIssues(state.rows, state.pageConfig);
+            return { ...withRows(state, cleaned.rows), pageConfig: cleaned.pageConfig };
+        }
+
         default:
             return state;
     }
@@ -489,7 +496,7 @@ const DOCUMENT_ACTIONS = new Set<string>([
     'ADD_ROW', 'REMOVE_BLOCK', 'REMOVE_ROW', 'UPDATE_BLOCK', 'UPDATE_BLOCK_SETTINGS',
     'SPLIT_ROW', 'REPLACE_BLOCK_IN_CELL', 'UPDATE_CELL_WIDTHS',
     'REORDER_ROWS', 'DUPLICATE_ROW', 'UPDATE_PAGE_CONFIG', 'LOAD_LAYOUT',
-    'MOVE_BLOCK',
+    'MOVE_BLOCK', 'CLEAN_ORPHANS',
 ]);
 
 function historyReducer(combined: { state: ExportLayoutState; history: HistoryState }, action: Action): { state: ExportLayoutState; history: HistoryState } {

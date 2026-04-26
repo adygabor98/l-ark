@@ -22,7 +22,7 @@ import {
 	DropdownMenuSeparator
 } from "./dropdown-button";
 import { useNotification } from "../../server/hooks/useNotification";
-import { formatRelativeDate } from "../../features/workspace/workspace.utils";
+//import { formatRelativeDate } from "../../features/workspace-old/workspace.utils";
 import type { Notification } from "@l-ark/types";
 
 const NOTIFICATION_ICONS: Record<string, ReactElement> = {
@@ -64,7 +64,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
 				{notification.message}
 			</p>
 			<p className="text-[10px] font-[Lato-Regular] text-black/30 mt-1">
-				{formatRelativeDate(notification.createdAt as any)}
+
 			</p>
 		</div>
 	</button>

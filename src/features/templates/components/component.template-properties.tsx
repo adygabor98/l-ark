@@ -94,10 +94,14 @@ const ComponentTemplateProperties = (props: PropTypes): ReactElement => {
         setValue(`${fieldPath}.requiredDocuments`, current.filter((_: string, i: number) => i !== idx));
     };
 
-    /** Manage to add a new column */
+    /**
+     * Manage to add a new column. The `id` is a UUID treated as the column's
+     * stable identifier by export-layout tokens — regenerating it or editing
+     * it would orphan existing tokens, so it's written once and never changed.
+     */
     const addColumn = (): void => {
         const current = getValues(`${fieldPath}.columns`) || [];
-        setValue(`${fieldPath}.columns`, [...current, { id: `col-${Date.now()}`, name: `Col ${current.length + 1}`, type: TemplateComponents.TEXT }]);
+        setValue(`${fieldPath}.columns`, [...current, { id: crypto.randomUUID(), name: `Col ${current.length + 1}`, type: TemplateComponents.TEXT }]);
     };
 
     /** Manage to remove an existing column */

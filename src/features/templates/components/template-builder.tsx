@@ -178,6 +178,7 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
     const addSection = (): void => {
         const newSection: TemplateFormSectionStructure = {
             id: `sec-${Date.now()}`,
+            stableId: crypto.randomUUID(),
             title: `Section ${sections.length + 1}`,
             fields: []
         };
@@ -215,6 +216,7 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
 
         const newField: TemplateFormSectionFieldStructure = {
             id: `f${Date.now()}`,
+            stableId: crypto.randomUUID(),
             type,
             label: type === TemplateComponents.DESCRIPTION ? '' : 'New Field',
             placeholder: null,
@@ -250,7 +252,19 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
             const fi = allSections[si].fields.findIndex(f => f.id === id);
 
             if (fi !== -1) {
-                const newField = { ...allSections[si].fields[fi], id: `f${Date.now()}` };
+                /**
+                 * A duplicated field is a new logical field — it gets a fresh
+                 * `stableId` so layout tokens pointing at the original stay
+                 * bound to the original. Also reset TABLE column ids so the
+                 * copies don't share column identity with the source.
+                 */
+                const source = allSections[si].fields[fi];
+                const newField: TemplateFormSectionFieldStructure = {
+                    ...source,
+                    id: `f${Date.now()}`,
+                    stableId: crypto.randomUUID(),
+                    columns: (source.columns ?? []).map(col => ({ ...col, id: crypto.randomUUID() }))
+                };
                 const newFields = [...allSections[si].fields];
                 newFields.splice(fi + 1, 0, newField);
                 setValue(`sections.${si}.fields`, newFields);

@@ -91,7 +91,9 @@
         "manager": "Manager",
         "roles": "Roles",
         "staff": "Staff",
-        "operations": "Operations"
+        "operations": "Operations",
+        "user": "User",
+        "expiry": "Expiry"
     },
     "placeholders": {
         "username-placeholder": "eexample13",
