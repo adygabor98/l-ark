@@ -106,7 +106,8 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
                             sectionTitle: section.title,
                             sectionId: String((section as any).stableId ?? section.id),
                             options: field.options  as unknown as FieldOption[],
-                            columns: field.columns as unknown as FieldColumn[]
+                            columns: field.columns as unknown as FieldColumn[],
+                            suffix: field.suffix as string | null ?? null
                         });
                     }
                 }
@@ -214,34 +215,33 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
         </div>
     );
 
+    /** Manage to render the page of the file template */
     const renderPage = (page: { rows: any[]; yOffset: number }, pageIdx: number) => (
-        <div
-            key={pageIdx}
-            className="export-page-paper bg-white relative overflow-hidden"
+        <div key={pageIdx} className="export-page-paper bg-white relative overflow-hidden"
             style={{
                 width: dims.width,
                 height: dims.height,
                 padding: `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`,
-                boxShadow: "0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)",
+                boxShadow: "0 4px 24px rgba(0,0,0,0.18), 0 1px 4px rgba(0,0,0,0.08)"
             }}
         >
-            {pageConfig && <Watermark text={pageConfig.watermark ?? ""} pageWidth={dims.width} color={pageConfig.watermarkColor} opacity={pageConfig.watermarkOpacity} />}
+            { pageConfig && <Watermark text={pageConfig.watermark ?? ""} pageWidth={dims.width} color={pageConfig.watermarkColor} opacity={pageConfig.watermarkOpacity} /> }
 
             <div className="relative z-10 flex flex-col h-full">
                 <div className="shrink-0">
-                    {pageConfig && <HeaderBand pageConfig={pageConfig} zoneExtensions={zoneExtensions} />}
+                    { pageConfig && <HeaderBand pageConfig={pageConfig} zoneExtensions={zoneExtensions} /> }
                 </div>
 
                 <div className="flex-1 flex flex-col gap-3 overflow-hidden" style={{ minHeight: 0 }}>
                     { page.rows.length === 0 ?
-                        <p className="text-center text-sm text-black/20 italic py-8">Empty page</p>
+                        <p className="text-center text-sm text-black/20 italic py-8"> Empty page </p>
                     :
                         page.rows.map(row => <RowPreview key={row.id} row={row} fieldValues={fieldValues} tokens={tokens} extensions={extensions} /> )
                     }
                 </div>
 
                 <div className="shrink-0">
-                    {pageConfig && <FooterBand pageConfig={pageConfig} pageNum={pageIdx + 1} totalPages={totalPages} zoneExtensions={zoneExtensions} />}
+                    { pageConfig && <FooterBand pageConfig={pageConfig} pageNum={pageIdx + 1} totalPages={totalPages} zoneExtensions={zoneExtensions} /> }
                 </div>
             </div>
         </div>

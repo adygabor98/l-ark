@@ -74,7 +74,14 @@ const FieldTokenNodeView = ({ node, selected }: NodeViewProps): ReactElement => 
                 title={`Field token: ${attrs.fieldLabel} — click to configure`}
             >
                 <span style={{ color: '#d97706', fontSize: '12px', flexShrink: 0 }}> { icon } </span>
-                <span style={{ maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis' }}> { attrs.fieldLabel } </span>
+                <span style={{
+                    maxWidth: '200px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    fontWeight: attrs.bold ? 700 : undefined,
+                    fontStyle: attrs.italic ? 'italic' : undefined,
+                    textDecoration: attrs.underline ? 'underline' : undefined,
+                }}> { attrs.fieldLabel } </span>
             </span>
 
             {/* Render select options as comma list */}

@@ -12,12 +12,15 @@ import {
     ArrowLeft,
     ArrowRight,
     ChevronRight,
+    Download,
     FileText,
+    Link2,
     Loader2,
     Save,
     SendHorizontal,
     X
 } from 'lucide-react';
+import ImportFormDataModal from './import-form-data-modal';
 import {
     useFileTemplate
 } from '../../../../server/hooks/useFileTemplate';
@@ -45,16 +48,18 @@ import {
     TemplateComponents,
     type FieldWidth
 } from '../../../../models/template.models';
+import {
+    useWorkspaceInstanceContext
+} from '../../context/workspace-instance.context';
 import Button from '../../../../shared/components/button';
 import Field from '../../../../shared/components/field';
-import { useWorkspaceInstanceContext } from '../../context/workspace-instance.context';
 
 const FIELD_TYPE_MAP: Record<string, string> = {
     TEXTAREA: 'textarea', NUMBER: 'number', CURRENCY: 'number',
     PERCENTAGE: 'number', DATE: 'date', DATE_TIME: 'date',
     BOOLEAN: 'toggle-switch', CHECKBOX: 'checkbox', RADIO_GROUP: 'radio',
     SELECT: 'select', FILE: 'image', ADDRESS: 'textarea', TABLE: 'table',
-    SIGNATURE: 'signature',
+    SIGNATURE: 'signature'
 };
 
 const toFieldType = (t: string) => FIELD_TYPE_MAP[t] ?? 'text';
@@ -75,11 +80,11 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
     /** Retrieve component utilities */
     const { templateId, formInstanceId, stepInstanceId, readOnly, onClose } = props;
     /** File template api utilities */
-    const { fileTemplate, retrieveFileTemplateById, retrieveFormInstanceById, createFormInstance, updateFormInstance, publishFormInstance } = useFileTemplate();
+    const { fileTemplate, retrieveFileTemplateById, retrieveFormInstanceById, createFormInstance, updateFormInstance, publishFormInstance, getTemplateMappingsForTargetVersion } = useFileTemplate();
     /** My workspace utilities (shared via context) */
-    const { refreshInstance } = useWorkspaceInstanceContext();
+    const { instance, refreshInstance } = useWorkspaceInstanceContext();
     /** Form definition */
-    const { control, reset, getValues, setError } = useForm({ mode: 'onBlur' });
+    const { control, reset, getValues, setError, setValue } = useForm({ mode: 'onBlur' });
     const { errors } = useFormState({ control });
     /** Watched values of the formulary */
     const formValues = useWatch({ control });
@@ -95,6 +100,10 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
     const [activeSectionIdx, setActiveSectionIdx] = useState<number>(0);
     /** Toast utilities */
     const { onToast } = useToast();
+    /** stableIds of fields that are auto-filled via a field mapping (read-only in this form) */
+    const [lockedFieldStableIds, setLockedFieldStableIds] = useState<Set<string>>(new Set());
+    /** Controls visibility of the ad-hoc import modal */
+    const [showImportModal, setShowImportModal] = useState(false);
     /** Active version: locked version for existing form instances, latest version for new ones */
     const activeVersion = useMemo(() => {
         if ( formInstance?.templateVersion ) return formInstance.templateVersion;
@@ -132,22 +141,91 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
 
     useEffect(() => {
         const initialize = async () => {
-            await retrieveFileTemplateById({ id: templateId });
+            const templateRes = await retrieveFileTemplateById({ id: templateId });
+            let resolvedVersionId: number | null = null;
 
             if ( formInstanceId ) {
                 const response: FetchResult<{ data: FileTemplateInstance }> = await retrieveFormInstanceById({ id: formInstanceId });
                 if ( response.data?.data ) {
-                    const instance = response.data.data;
-                    setFormInstance(instance);
+                    const formData = response.data.data;
+                    setFormInstance(formData);
                     const values: Record<string, any> = {};
-                    for (const fv of instance.fieldValues) {
+                    for (const fv of formData.fieldValues) {
                         values[`field_${fv.fieldId}`] = fv.value;
                     }
-
-                    setFormStatus(instance.status ?? null);
+                    setFormStatus(formData.status ?? null);
                     reset(values);
+                    resolvedVersionId = formData.templateVersionId ?? null;
+                }
+            } else {
+                const versions = (templateRes as any)?.data?.data?.versions ?? [];
+                const latest = versions.find((v: any) => v.isLatest) ?? versions[0];
+                resolvedVersionId = latest?.id ?? null;
+            }
+
+            if ( resolvedVersionId ) {
+                const mappingRes = await getTemplateMappingsForTargetVersion({ targetVersionId: resolvedVersionId });
+                const incomingMappings = (mappingRes as any)?.data?.data ?? [];
+                setLockedFieldStableIds(new Set(incomingMappings.map((m: any) => m.targetFieldStableId)));
+
+                // For new forms: pre-populate locked fields from source forms already in this operation
+                if ( !formInstanceId && incomingMappings.length > 0 && instance ) {
+                    // Build stableId → fieldId map from the resolved template version
+                    const stableIdToFieldId = new Map<string, number>();
+                    const allVersions = (templateRes as any)?.data?.data?.versions ?? [];
+                    for (const v of allVersions) {
+                        for (const s of v.sections ?? []) {
+                            for (const f of s.fields ?? []) {
+                                if ( f.stableId ) stableIdToFieldId.set(f.stableId, f.id);
+                            }
+                        }
+                    }
+
+                    // Group mappings by sourceVersionId
+                    const bySourceVersion = new Map<number, any[]>();
+                    for (const m of incomingMappings) {
+                        const list = bySourceVersion.get(m.sourceVersionId) ?? [];
+                        list.push(m);
+                        bySourceVersion.set(m.sourceVersionId, list);
+                    }
+
+                    for (const [sourceVersionId, versionMappings] of bySourceVersion) {
+                        // Find the source FormInstance in the current operation
+                        let sourceFormInstanceId: number | null = null;
+                        for (const si of instance.stepInstances ?? []) {
+                            for (const sif of (si as any).formInstances ?? []) {
+                                const fi = sif.formInstance;
+                                if ( fi?.templateVersionId === sourceVersionId ) {
+                                    sourceFormInstanceId = fi.id;
+                                    break;
+                                }
+                            }
+                            if ( sourceFormInstanceId ) break;
+                        }
+                        if ( !sourceFormInstanceId ) continue;
+
+                        // Fetch source form values
+                        const sourceRes = await retrieveFormInstanceById({ id: sourceFormInstanceId });
+                        const sourceData = (sourceRes as any)?.data?.data;
+                        if ( !sourceData ) continue;
+
+                        // Build stableFieldId → value map
+                        const valueByStableId = new Map<string, unknown>();
+                        for (const fv of sourceData.fieldValues ?? []) {
+                            if ( fv.stableFieldId ) valueByStableId.set(fv.stableFieldId, fv.value);
+                        }
+
+                        // Pre-populate each locked target field
+                        for (const mapping of versionMappings) {
+                            const sourceValue = valueByStableId.get(mapping.sourceFieldStableId);
+                            if ( sourceValue === undefined ) continue;
+                            const targetFieldId = stableIdToFieldId.get(mapping.targetFieldStableId);
+                            if ( targetFieldId ) setValue(`field_${targetFieldId}`, sourceValue);
+                        }
+                    }
                 }
             }
+
             setLoading(false);
         };
         initialize();
@@ -157,10 +235,7 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
 	const collectFieldValues = (data: Record<string, any>) => {
 		return Object.entries(data)
 			.filter(([key]) => key.startsWith('field_'))
-			.map(([key, value]) => ({
-				fieldId: key.replace('field_', ''),
-				value
-			}));
+			.map(([key, value]) => ({ fieldId: key.replace('field_', ''), value }));
 	};
 
     /** Manage to save/update the form instance draft information */
@@ -226,9 +301,9 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
 
         sections.forEach((section: any) => {
             (section.fields ?? []).forEach((field: any) => {
-                if (field.required && field.type !== 'DESCRIPTION') {
+                if ( field.required && field.type !== 'DESCRIPTION' ) {
                     const val = values[`field_${field.id}`];
-                    if (val === undefined || val === null || val === '') {
+                    if ( val === undefined || val === null || val === '' ) {
                         setError(`field_${field.id}`, { type: 'required', message: 'Required' });
                         fieldErrors[`field_${field.id}`] = true;
                     }
@@ -237,14 +312,19 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
         });
 
         if (Object.keys(fieldErrors).length > 0) {
-            const firstErrorIdx = sections.findIndex((s: any) =>
-                (s.fields ?? []).some((f: any) => fieldErrors[`field_${f.id}`])
-            );
-            if (firstErrorIdx >= 0) setActiveSectionIdx(firstErrorIdx);
+            const firstErrorIdx = sections.findIndex((s: any) => (s.fields ?? []).some((f: any) => fieldErrors[`field_${f.id}`]));
+            if ( firstErrorIdx >= 0 ) setActiveSectionIdx(firstErrorIdx);
             return;
         }
 
         submitFn(values);
+    };
+
+    /** Apply imported field values to the form */
+    const handleImport = (mappings: { targetFieldId: string; sourceValue: unknown }[]) => {
+        for (const m of mappings) {
+            setValue(`field_${m.targetFieldId}`, m.sourceValue, { shouldDirty: true });
+        }
     };
 
     /** Manage to render the header of the modal */
@@ -263,9 +343,17 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
                     </p>
                 </div>
             </div>
-            <Button variant="icon" onClick={() => onClose(null)}>
-                <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center gap-2">
+                { !readOnly && instance &&
+                    <Button variant="secondary" size="sm" onClick={() => setShowImportModal(true)}>
+                        <Download className="w-3.5 h-3.5" />
+                        Import data
+                    </Button>
+                }
+                <Button variant="icon" onClick={() => onClose(null)}>
+                    <X className="w-4 h-4" />
+                </Button>
+            </div>
         </div>
     );
 
@@ -370,8 +458,17 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
                                         </div>
                                     );
                                 }
+                                const isLocked = !readOnly && lockedFieldStableIds.has(fieldDef.stableId);
                                 return (
                                     <div key={fieldDef.id} className={widthClass}>
+                                        { isLocked &&
+                                            <div className="flex items-center gap-1.5 mb-1">
+                                                <Link2 className="w-3 h-3 text-amber-500 shrink-0" />
+                                                <span className="text-[10px] font-[Lato-Regular] text-amber-600">
+                                                    Auto-filled from linked template
+                                                </span>
+                                            </div>
+                                        }
                                         <Field
                                             name={`field_${fieldDef.id}`}
                                             type={toFieldType(fieldDef.type)}
@@ -379,8 +476,8 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
                                             placeholder={fieldDef.placeholder}
                                             required={fieldDef.required}
                                             control={control}
-                                            disabled={readOnly}
-                                            suffix={toSuffix(fieldDef.type)}
+                                            disabled={readOnly || isLocked}
+                                            suffix={fieldDef.type === TemplateComponents.NUMBER ? (fieldDef.suffix ?? undefined) : toSuffix(fieldDef.type)}
                                             params={fieldDef.type === 'TABLE' ? fieldDef.columns : fieldDef.options}
                                             multiple={fieldDef.multiple}
                                             hideInfinity={true}
@@ -479,6 +576,16 @@ const FillOutFileTemplate = (props: PropTypes): ReactElement => {
                 </div>
                 { renderFooter() }
             </div>
+
+            {showImportModal && instance && (
+                <ImportFormDataModal
+                    currentFormSections={sections}
+                    currentFormInstanceId={formInstanceId}
+                    instance={instance}
+                    onImport={handleImport}
+                    onClose={() => setShowImportModal(false)}
+                />
+            )}
         </div>
     );
 }

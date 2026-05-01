@@ -16,7 +16,6 @@ import {
     useNavigate
 } from 'react-router-dom';
 import {
-    LinkType,
     OperationBlueprintStatus,
     OperationInstanceStatus,
     OperationType,
@@ -25,6 +24,9 @@ import {
     type OperationInstance,
     type OperationInstanceInput
 } from '@l-ark/types';
+import {
+    filterEligibleInstances,
+} from './utils/eligible-instances';
 import {
     useOperationBlueprint
 } from '../../server/hooks/useOperationBlueprint';
@@ -69,12 +71,13 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     /** Types of blueprints */
     const types: OperationType[] = [OperationType.OTHER, OperationType.GLOBAL];
     /** Formulary definition */
-    const methods = useForm<{ type: OperationType, officeId: number | null, blueprintId: number | null, description: string }>({
+    const methods = useForm<{ type: OperationType, officeId: number | null, blueprintId: number | null, title: string, description: string }>({
         mode: 'onChange',
         defaultValues: {
             type: OperationType.OTHER,
             officeId: null,
             blueprintId: null,
+            title: '',
             description: ''
         }
     });
@@ -82,12 +85,16 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     const officeId = methods.watch('officeId');
     const blueprintId = methods.watch('blueprintId');
     /** List of blueprints filtered by active type */
-    const filteredBlueprints = blueprints.filter(op => op.type === activeType && op.status !== OperationBlueprintStatus.DRAFT);
+    const filteredBlueprints = blueprints.filter(op =>
+        op.type === activeType
+        && op.status !== OperationBlueprintStatus.DRAFT
+        && op.status !== OperationBlueprintStatus.ARCHIVED
+    );
     /** State to manage the selected prerequisite instance IDs */
 	const [prereqInstanceIds, setPrereqInstanceIds] = useState<Record<number, number | null>>({});
     /** Prerequisites for the selected GLOBAL blueprint */
     const prerequisites = useMemo(() => {
-        if (!blueprintId || activeType !== OperationType.GLOBAL) return [];
+        if ( !blueprintId || activeType !== OperationType.GLOBAL ) return [];
 
         const blueprint = blueprints.find((blueprint: OperationBlueprint) => blueprint.id === blueprintId);
         return blueprint?.prerequisites ?? [];
@@ -95,16 +102,28 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     /** Eligible completed instances per required blueprint, filtered by selected office */
     const eligibleByBlueprintId = useMemo(() => {
         const map: Record<number, OperationInstance[]> = {};
+        // Wide whitelist (preserves the behaviour of the original buggy expression
+        // `ACTIVE || ... || COMPLETED_READY || LINKED` which always evaluated truthy).
+        // The new-instance flow accepts any non-DRAFT instance as a prerequisite.
+        const wideStatuses = new Set([
+            OperationInstanceStatus.ACTIVE,
+            OperationInstanceStatus.COMPLETED_READY,
+            OperationInstanceStatus.LINKED,
+            OperationInstanceStatus.CLOSED,
+            OperationInstanceStatus.PARTIALLY_CLOSED,
+            OperationInstanceStatus.PENDING_PAYMENT,
+        ]);
         for (const prereq of prerequisites) {
-            const bpId = Number(prereq.requiredBlueprintId);
-            map[bpId] = instances.filter((inst: any) =>
-                inst.blueprintId === bpId &&
-                (!blueprintId || inst.officeId === officeId) &&
-                inst.status === OperationInstanceStatus.COMPLETED_READY
-            );
+            const bpId = prereq.requiredBlueprintId;
+            map[bpId] = filterEligibleInstances({
+                instances,
+                blueprintId: bpId,
+                officeId: blueprintId ? officeId : null,
+                allowedStatuses: wideStatuses,
+            });
         }
         return map;
-	}, [prerequisites, instances, officeId]);
+	}, [prerequisites, instances, officeId, blueprintId]);
     /** Whether all prerequisites have a selected instance */
 	const allPrereqsMet = useMemo(() => {
 		if (prerequisites.length === 0) return true;
@@ -116,6 +135,11 @@ const MyWorkspaceNewInstance = (): ReactElement => {
         retrieveOfficeByUser({ idUser: user?.id as number });
         retrieveInstances();
     }, []);
+
+    useEffect(() => {
+        const bp = blueprints.find((b: OperationBlueprint) => b.id === blueprintId);
+        if (bp) methods.setValue('title', bp.title);
+    }, [blueprintId]);
 
     /** Manage to navigate to the list of operation instances page */
     const goBack = (): void => {
@@ -163,11 +187,11 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 
     /** Manage to re-initialize the form with a pre-selected blueprint */
     const onCreatePreRequisite = (blueprintId: number): void => {
-        const blueprint = blueprints.find(b => b.id == blueprintId);
+        const blueprint = blueprints.find(b => Number(b.id) === Number(blueprintId));
 
         if ( !blueprint ) return;
 
-        methods.reset({ type: blueprint.type, officeId: null, blueprintId: blueprint.id, description: '' });
+        methods.reset({ type: blueprint.type, officeId: null, blueprintId: blueprint.id, title: blueprint.title, description: '' });
 
         setPrereqInstanceIds({});
     }
@@ -320,23 +344,25 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 							<p className="text-lg text-muted-foreground font-[Lato-Light]"> Choose an operation blueprint and office to start working. </p>
 						</div>
 
-						{/* Blueprint selection */}
-						{ renderBlueprintSelections() }
+                        {/* Blueprint selection */}
+                        { renderBlueprintSelections() }
+
+						{/* Title */}
+						{ blueprintId &&
+                            <Field control={methods.control} name='title' label='Instance Title' placeholder='Give this instance a unique name...' type='text' className='bg-white' />
+						}
 
 						{/* Description */}
 						{ blueprintId &&
                             <Field control={methods.control} name='description' label='Description' placeholder='Describe this operation instance...' type='textarea' className='bg-white' />
 						}
 
-						{/* Prerequisites — only for GLOBAL blueprints that have requirements */}
-						{ blueprintId && prerequisites.length > 0 && renderPrerequisits() }
-
 						{/* Office selection */}
 						{ blueprintId &&
 							<div className="space-y-3 animate-in slide-in-from-bottom-4 fade-in duration-500">
 								<label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Office </label>
-								<div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-									{ officesUser.map((office) => (
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									{ officesUser.map(office => (
 										<button key={office.id} onClick={() => methods.setValue('officeId', office.id)}
 											className={`text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer ${
 												officeId === office.id ? 'border-[#FFBF00] bg-amber-50/50 ring-2 ring-[#FFBF00]/20 shadow-sm' : 'border-black/6 bg-white hover:border-black/12 hover:shadow-sm'
@@ -348,6 +374,9 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 								</div>
 							</div>
 						}
+
+						{/* Prerequisites — only for GLOBAL blueprints that have requirements */}
+						{ blueprintId && prerequisites.length > 0 && renderPrerequisits() }
 
 						{/* Actions */}
 						<div className="pt-10 border-t border-border flex items-center justify-end gap-6">

@@ -52,13 +52,9 @@ import  AddBlockButton from './add-block-button';
 import SlashCommandMenu from '../slash-command/slash-command-menu';
 import RichTextBlock from '../blocks/rich-text-block';
 import TableBlock from '../blocks/table-block';
-import ImageBlock from '../blocks/image-block';
 import SignatureBlock from '../blocks/signature-block';
-import DividerBlock from '../blocks/divider-block';
-import PageBreakBlock from '../blocks/page-break-block';
 import FormGridBlock from '../blocks/form-grid-block';
 import FieldGridBlock from '../blocks/field-grid-block';
-import CheckboxGridBlock from '../blocks/checkbox-grid-block';
 import {
     type ExportBlock,
     type ExportRow,
@@ -144,12 +140,8 @@ const BlockContent = memo(function BlockContent({ block }: { block: ExportBlock 
     switch (block.type) {
         case 'RICH_TEXT': return <RichTextBlock block={block} />;
         case 'TABLE': return <TableBlock block={block} />;
-        case 'IMAGE': return <ImageBlock block={block} />;
         case 'SIGNATURE': return <SignatureBlock block={block} />;
-        case 'DIVIDER': return <DividerBlock block={block} />;
-        case 'PAGE_BREAK': return <PageBreakBlock />;
         case 'FIELD_GRID': return <FieldGridBlock block={block} />;
-        case 'CHECKBOX_GRID': return <CheckboxGridBlock block={block} />;
         case 'FORM_GRID': return <FormGridBlock block={block} />;
         case 'BLANK': return <div className="w-full h-full min-h-10 border border-dashed border-black/15 rounded-md bg-black/1 flex items-center justify-center"><span className="text-[10px] text-black/25 font-[Lato-Regular] select-none">Empty space</span></div>;
         default: return <></>;

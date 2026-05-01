@@ -23,8 +23,8 @@ export const RETRIEVE_OPERATION_BLUEPRINTS = gql`
 export const RETRIEVE_OPERATION_BLUEPRINT_BY_ID = gql`
     ${BLUEPRINT_DETAIL_FIELDS}
 
-    query gqlRetrieveOperationBlueprintById($id: ID!) {
-        data: gqlRetrieveOperationBlueprintById(id: $id) {
+    query gqlRetrieveOperationBlueprintById($id: ID!, $versionId: ID) {
+        data: gqlRetrieveOperationBlueprintById(id: $id, versionId: $versionId) {
             ...BlueprintDetailFields
         }
     }

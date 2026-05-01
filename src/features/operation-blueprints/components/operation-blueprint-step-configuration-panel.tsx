@@ -1,6 +1,7 @@
 import {
     useEffect,
     useMemo,
+    useRef,
     useState,
     type Dispatch,
     type ReactElement,
@@ -51,8 +52,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
         defaultValues: step,
         mode: 'onChange'
     });
-    /** Watched form values */
-    const formValues = watch();
+    /** Targeted watches — only re-render the panel for fields that drive conditional UI */
     const stepType = watch('stepType');
     const allowDocumentUpload = watch('allowDocumentUpload');
     /** Creating file template map for fast access on information */
@@ -63,6 +63,8 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
     }, [fileTemplates]);
     /** State to manage the visibility of the link modal */
     const [linkModalOpen, setLinkModalOpen] = useState<boolean>(false);
+    /** Ref to the scrollable body so we can reset scroll on step change */
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         retrieveFileTemplates();
@@ -70,6 +72,9 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 
     useEffect(() => {
         reset(step);
+        if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = 0;
+        }
     }, [step, reset]);
 
     useEffect(() => {
@@ -77,26 +82,38 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
     }, [step.fileTemplateConfigs, setValue]);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            const { title, description, stepType, waitForLinkedType, openBlueprintIds, notificationPersons, conditionalVisibility, isBlocking, isRequired, allowDocumentUpload, allowInstanceLink, expectedDocuments } = formValues;
-            onUpdate(step.id, {
-                title,
-                description,
-                stepType,
-                waitForLinkedType,
-                openBlueprintIds,
-                notificationPersons,
-                conditionalVisibility,
-                isBlocking,
-                isRequired,
-                allowDocumentUpload,
-                allowInstanceLink,
-                expectedDocuments
-            });
-        }, 100);
+        let timer: ReturnType<typeof setTimeout> | null = null;
 
-        return () => clearTimeout(timer);
-    }, [formValues, step.id, onUpdate]);
+        const subscription = watch((values) => {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                const {
+                    title, description, stepType, waitForLinkedType, openBlueprintIds,
+                    notificationPersons, conditionalVisibility, isBlocking, isRequired,
+                    allowDocumentUpload, allowInstanceLink, expectedDocuments
+                } = values;
+                onUpdate(step.id, {
+                    title,
+                    description,
+                    stepType,
+                    waitForLinkedType,
+                    openBlueprintIds,
+                    notificationPersons,
+                    conditionalVisibility,
+                    isBlocking,
+                    isRequired,
+                    allowDocumentUpload,
+                    allowInstanceLink,
+                    expectedDocuments
+                });
+            }, 250);
+        });
+
+        return () => {
+            if (timer) clearTimeout(timer);
+            subscription.unsubscribe();
+        };
+    }, [watch, step.id, onUpdate]);
 
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent): void => {
@@ -147,7 +164,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                     File Templates Linked
                 </label>
                 <span className="text-[10px] font-[Lato-Bold] text-black/30 bg-black/4 px-1.5 py-0.5 rounded-full">
-                    { formValues.fileTemplateConfigs.length }
+                    { step.fileTemplateConfigs.length }
                 </span>
             </div>
 
@@ -157,13 +174,13 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
             </Button>
 
             {/* Linked templates list */}
-            { !formValues.fileTemplateConfigs || formValues.fileTemplateConfigs.length === 0 ?
+            { !step.fileTemplateConfigs || step.fileTemplateConfigs.length === 0 ?
                 <p className="text-xs font-[Lato-Regular] text-black/30 italic text-center py-2">
                     No file templates linked
                 </p>
             :
                 <div className="flex flex-col gap-1.5">
-                    { formValues.fileTemplateConfigs.map(config => {
+                    { step.fileTemplateConfigs.map(config => {
                         const template = templateMap.get(config.templateId);
 
                         return (
@@ -247,7 +264,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 			</div>
 
 			{/* Body */}
-			<div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+			<div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
                 <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Title </label>
 				<Field control={control} name="title" type="text" placeholder="Step title..." required />
 

@@ -66,7 +66,10 @@ export function buildDataFilledFieldTokenExtension(fieldValues: FieldValueMap, t
 
 			// ── NUMBER ──
 			if (fieldType === "NUMBER") {
-				return ["span", { "data-field-filled": "", style: valueStyle }, String(rawValue)];
+				const token = tokens.find(t => t.fieldId === fieldId);
+				const suffix = token?.suffix;
+				const val = String(rawValue);
+				return ["span", { "data-field-filled": "", style: valueStyle }, suffix ? `${val} ${suffix}` : val];
 			}
 
 			// ── CURRENCY ──

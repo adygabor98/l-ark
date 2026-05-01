@@ -9,7 +9,7 @@ import type {
     ReactElement
 } from "react";
 
-export type BlockType = 'RICH_TEXT' | 'TABLE' | 'IMAGE' | 'SIGNATURE' | 'DIVIDER' | 'PAGE_BREAK' | 'FIELD_GRID' | 'BLANK' | 'FORM_GRID' | 'CHECKBOX_GRID';
+export type BlockType = 'RICH_TEXT' | 'TABLE' | 'SIGNATURE' | 'FIELD_GRID' | 'BLANK' | 'FORM_GRID';
 export type PageNumberPosition = 'none' | 'left' | 'center' | 'right';
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
@@ -34,17 +34,6 @@ export interface FieldGridEntry {
     labelBold?: boolean;
     /** Span multiple grid columns (default 1) */
     colSpan?: number;
-}
-
-/** A single item in a CHECKBOX_GRID block */
-export interface CheckboxGridItem {
-    id: string;
-    /** Bound template field ID (BOOLEAN or CHECKBOX type) */
-    fieldId?: string;
-    /** Custom label override (used when no field is bound) */
-    customLabel?: string;
-    /** Render as radio instead of checkbox */
-    isRadio?: boolean;
 }
 
 /** Content type for a cell in a FORM_GRID block */
@@ -108,9 +97,6 @@ export interface ExportBlockSettings {
     alternatingRows?: boolean;
     /** Column visibility, order and width overrides. When unset, all columns shown equally. */
     tableColumns?: TableColumnConfig[];
-    // IMAGE
-    imageAlignment?: 'left' | 'center' | 'right' | 'justify';
-    imageWidth?: number;
     // SIGNATURE
     signatureWidth?: number;
     /** Show the printed-name slot below the signing line (default true) */
@@ -122,9 +108,6 @@ export interface ExportBlockSettings {
     /** Role heading above the signing line (e.g. "L'Agència", "El Client").
      *  Empty string renders no heading. */
     signatureRole?: string;
-    // DIVIDER
-    lineWeight?: number;
-    lineColor?: string;
     // FIELD_GRID
     gridColumns?: number;
     gridEntries?: FieldGridEntry[];
@@ -144,15 +127,6 @@ export interface ExportBlockSettings {
     formGridBorderWidth?: number;
     formGridCellPadding?: number;
     formGridOuterBorder?: boolean;
-    // CHECKBOX_GRID
-    checkboxItems?: CheckboxGridItem[];
-    checkboxColumns?: number;
-    checkboxShowBorders?: boolean;
-    checkboxBorderColor?: string;
-    checkboxCompact?: boolean;
-    checkboxStyle?: 'checkbox' | 'radio' | 'mixed';
-    checkboxTitle?: string;
-    checkboxShowTitle?: boolean;
     // REPEATER
     repeaterDirection?: 'vertical' | 'horizontal';
     repeaterGap?: number;
@@ -181,8 +155,6 @@ export interface ExportBlock {
     content?: Record<string, unknown>;
     /** TABLE | SIGNATURE: bound field id */
     sourceFieldId?: string;
-    /** IMAGE: data URL or upload URL */
-    imageUrl?: string;
     settings: ExportBlockSettings;
     /** Hide block if this field has no value */
     conditionalFieldId?: string;
@@ -256,6 +228,10 @@ export interface FieldTokenAttrs {
     numberFormat?: string;
     /** Serialized options for CHECKBOX / RADIO_GROUP / SELECT fields */
     options?: string; // JSON-serialized FieldOption[]
+    suffix?: string | null;
+    bold?: boolean;
+    italic?: boolean;
+    underline?: boolean;
 }
 
 /** Option for CHECKBOX / RADIO_GROUP / SELECT fields */
@@ -268,6 +244,7 @@ export interface FieldOption {
 export interface FieldColumn {
     id: string;
     name: string;
+    type?: string;
 }
 
 /** Flat representation of a template field available as a token */
@@ -281,6 +258,8 @@ export interface AvailableToken {
     options?: FieldOption[];
     /** Column definitions for TABLE fields */
     columns?: FieldColumn[];
+    /** Suffix for NUMBER fields */
+    suffix?: string | null;
 }
 
 export interface ExportLayoutRouteState {
@@ -294,8 +273,9 @@ export interface ExportLayoutRouteState {
             id: string;
             label: string;
             type: string;
+            suffix?: string | null;
             options?: Array<{ label: string; value: string }>;
-            columns?: Array<{ id: string; name: string }>;
+            columns?: Array<{ id: string; name: string; type?: string }>;
         }>;
     }>;
 }
@@ -303,14 +283,10 @@ export interface ExportLayoutRouteState {
 export const BLOCK_TYPE_LABELS: Record<string, string> = {
     RICH_TEXT:  'Text Block',
     TABLE:      'Table Block',
-    IMAGE:      'Image Block',
     SIGNATURE:  'Signature Block',
-    DIVIDER:    'Divider Block',
-    PAGE_BREAK: 'Page Break',
     FIELD_GRID: 'Field Grid',
     BLANK:      'Blank Block',
     FORM_GRID:  'Form Grid',
-    CHECKBOX_GRID: 'Checkbox Grid',
 };
 
 export const ALIGNMENTS = [

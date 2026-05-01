@@ -16,14 +16,20 @@ import {
 } from 'lucide-react';
 import {
     EdgeConditionType,
+    LinkType,
     OperationInstanceStatus,
     StepInstanceStatus,
     StepType,
     type ApiResponse
 } from '@l-ark/types';
+import SharedDocumentsPanel from '../shared-documents-panel';
 import {
     getStepCompletionBlockers
 } from '../../utils/my-workspace.utils';
+import {
+    areAllDocsChecked,
+    findEntryForDoc
+} from '../../utils/checked-documents';
 import {
     useStepProgression
 } from '../../hooks/useStepProgression';
@@ -44,15 +50,13 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     /** Retrieve component utilities */
     const { isReadOnly } = props;
     /** My workspace utilities (shared via context) */
-    const { instance, blueprint, selectedStepInstance, selectedBlueprintStep, dependsOnLinks, launchedFromInstance, setInstance, setSelectedStepInstanceId, refreshInstance } = useWorkspaceInstanceContext();
+    const { instance, blueprint, selectedStepInstance, selectedBlueprintStep, dependsOnLinks, setInstance, setSelectedStepInstanceId, refreshInstance } = useWorkspaceInstanceContext();
     /** Step progression utilities */
     const { handleStepStatusChange } = useStepProgression({ instance: instance, blueprint: blueprint, isReadOnly: isReadOnly, onInstanceChange: setInstance, onSelectStep: setSelectedStepInstanceId });
     /** Operation instance api utilities */
-    const { selectDocumentsToShare, closeOperation, updateStepInstance } = useOperationInstance();
+    const { closeOperation, updateStepInstance } = useOperationInstance();
     /** Toast utilities */
     const { onToast } = useToast();
-    /** State to manage the displayment of the show share documents */
-    const [shareDocIds, setShareDocIds] = useState<string[]>([]);
     /** State to display the user choice section */
     const [showBranchChoice, setShowBranchChoice] = useState(false);
 
@@ -77,27 +81,57 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     const notificationBlocked = requiredPersons.length > 0 && requiredPersons.some(p => !notifiedPersons.includes(p));
     /** Analyze if this operation have any dependent operations liked which aren't completed */
     const activeDepends = dependsOnLinks.filter((l: any) => l.sourceInstance?.status && !["CLOSED", "PARTIALLY_CLOSED"].includes(l.sourceInstance.status));
-    /** Block progression if the step requires document uploads and the count doesn't match or not all are checked */
+    /**
+     * Block progression if the step requires document uploads. Each expected doc
+     * may be satisfied either by a local upload (plain entry — needs a real file
+     * uploaded to this step) or by a doc/form shared with this operation (SHARED
+     * entry — no local file required).
+     */
     const expectedDocs: string[] = selectedBlueprintStep.allowDocumentUpload ? (selectedBlueprintStep.expectedDocuments ?? []).filter(Boolean) : [];
     const expectedDocCount = expectedDocs.length;
-    const uploadedDocCount = selectedStepInstance.documents?.length ?? 0;
     const checkedDocs: string[] = selectedStepInstance.checkedDocuments ?? [];
-    const allChecked = expectedDocCount === 0 || expectedDocs.every(d => checkedDocs.includes(d));
-    const docUploadBlocked = expectedDocCount > 0 && (uploadedDocCount !== expectedDocCount || !allChecked);
+    const allChecked = expectedDocCount === 0 || areAllDocsChecked(checkedDocs, expectedDocs);
+    const sharedSatisfiedCount = expectedDocs.filter(d => {
+        const m = findEntryForDoc(checkedDocs, d);
+        return m?.parsed.sharedKind != null;
+    }).length;
+    const satisfiedCount = expectedDocs.filter(d => findEntryForDoc(checkedDocs, d) != null).length;
+    const plainCheckedCount = satisfiedCount - sharedSatisfiedCount;
+    const localUploads = selectedStepInstance.documents?.length ?? 0;
+    /** Plain-checked requirements must each have a real uploaded file backing them. */
+    const uploadsMissing = expectedDocCount > 0 && localUploads < plainCheckedCount;
+    const docUploadBlocked = expectedDocCount > 0 && (!allChecked || uploadsMissing);
+    /**
+     * Closure-time peers — every operation B is connected to (parents launched via
+     * OPEN_OPERATION, GLOBAL_OTHER links from Request Global Operation, OTHER_OTHER
+     * links). For each peer we render a SharedDocumentsPanel so the user can hand off
+     * forms / files alongside closure. Both directions of the link surface here so a
+     * sub-op can share back UP to its parent.
+     */
+    const SHAREABLE_LINK_TYPES: LinkType[] = [LinkType.DEPENDS_ON, LinkType.GLOBAL_OTHER, LinkType.OTHER_OTHER];
+    const closurePeerLinks = [
+        ...((instance?.sourceLinks ?? []) as any[])
+            .filter(l => SHAREABLE_LINK_TYPES.includes(l.linkType) && l.targetInstance)
+            .map(l => ({ link: l, counterpartTitle: l.targetInstance?.title })),
+        ...((instance?.targetLinks ?? []) as any[])
+            .filter(l => SHAREABLE_LINK_TYPES.includes(l.linkType) && l.sourceInstance)
+            .map(l => ({ link: l, counterpartTitle: l.sourceInstance?.title })),
+    ];
+
     /** Retrieve to get the step type */
     const stepType = selectedBlueprintStep.stepType ?? StepType.STANDARD;
     /** Checks for the step */
 	const isWaitBlocked = stepType === StepType.WAIT_FOR_LINKED && activeDepends.length > 0;
 	const openOpBlocked = stepType === StepType.WAIT_FOR_LINKED && dependsOnLinks.length === 0;
     /** Information of the user choise if exists in this step */
-    const outgoingEdges = (blueprint?.edges ?? []).filter((e: any) => e.sourceId == selectedBlueprintStep.id);
+    const outgoingEdges = (blueprint?.edges ?? []).filter((e: any) => Number(e.sourceId) === Number(selectedBlueprintStep.id));
     const userChoiceEdges = outgoingEdges.filter((e: any) => e.conditionType === EdgeConditionType.USER_CHOICE);
     const hasBranching = userChoiceEdges.length > 1;
     /** The edge the user already picked for this step (if any) */
     const chosenEdge = selectedStepInstance.selectedEdgeId
         ? userChoiceEdges.find((e: any) => Number(e.id) === Number(selectedStepInstance.selectedEdgeId)) ?? null
         : null;
-    const chosenTargetStep = chosenEdge ? (blueprint?.steps ?? []).find((s: any) => s.id == chosenEdge.targetId) : null;
+    const chosenTargetStep = chosenEdge ? (blueprint?.steps ?? []).find((s: any) => Number(s.id) === Number(chosenEdge.targetId)) : null;
     /** Payment information */
     const paymentTypes = ["CLOSED", "PARTIALLY_CLOSED", "PENDING_PAYMENT"];
     const labels: Record<string, { icon: ReactElement; label: string; variant: "primary" | "secondary", disabled?: boolean }> = {
@@ -118,9 +152,9 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     }
 
     const onPayment = async (payStatus: string): Promise<void> => {
-        if ( launchedFromInstance && shareDocIds.length > 0 ) {
-            await selectDocumentsToShare({ input: { instanceId: String(instance?.id), targetInstanceId: String(launchedFromInstance.id), documentIds: shareDocIds } });
-        }
+        // Document sharing is handled inline via SharedDocumentsPanel above (which
+        // persists InstanceLinkSharedDocument rows + DocumentAccessGrants on each Add),
+        // so closure just transitions the instance status here.
         const response: FetchResult<{ data: ApiResponse }> = await closeOperation({ input: { instanceId: String(instance?.id), paymentStatus: payStatus } });
         // Mark the step completed directly — skipping handleStepStatusChange which would
         // overwrite the payment status (PARTIALLY_CLOSED etc.) with COMPLETED_READY.
@@ -150,14 +184,20 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
                     <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs font-[Lato-Bold] text-amber-700"> Missing documents </p>
-                        { uploadedDocCount !== expectedDocCount &&
+                        { uploadsMissing &&
                             <p className="text-[11px] font-[Lato-Regular] text-amber-600/70 mt-0.5">
-                                { uploadedDocCount } of { expectedDocCount } required documents uploaded.
+                                { localUploads } of { plainCheckedCount } required documents uploaded.
                             </p>
                         }
                         { !allChecked &&
                             <p className="text-[11px] font-[Lato-Regular] text-amber-600/70 mt-0.5">
-                                Not all required documents have been checked.
+                                { satisfiedCount } of { expectedDocCount } required documents satisfied
+                                { sharedSatisfiedCount > 0 ? ` (${sharedSatisfiedCount} via shared)` : '' }.
+                            </p>
+                        }
+                        { !allChecked &&
+                            <p className="text-[11px] font-[Lato-Regular] text-amber-600/70 mt-0.5">
+                                Mark each remaining requirement as uploaded — or link it to a document shared with this operation.
                             </p>
                         }
                     </div>
@@ -187,29 +227,20 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
             {/* Closure: payment decision */}
             { stepType === StepType.CLOSURE && instance?.status !== OperationInstanceStatus.CLOSED ?
                 <>
-                    { launchedFromInstance &&
-                        <div className="p-3 rounded-xl border border-blue-100 bg-blue-50/50 mb-2">
-                            <p className="text-[11px] font-[Lato-Bold] text-blue-700 mb-2">
-                                Share documents with "{ launchedFromInstance.title }"?
+                    { closurePeerLinks.length > 0 &&
+                        <div className="space-y-2 mb-3">
+                            <p className="text-[11px] font-[Lato-Bold] text-black/60 uppercase tracking-wide">
+                                Share documents with linked operations
                             </p>
-                            { selectedStepInstance.documents?.length > 0 ?
-                                <div className="space-y-1.5">
-                                    { selectedStepInstance.documents.map((doc: any) => (
-                                        <label key={doc.id} className="flex items-center gap-2 cursor-pointer text-xs text-blue-700 font-[Lato-Regular]">
-                                            <input type="checkbox" checked={shareDocIds.includes(String(doc.id))}
-                                                onChange={e => {
-                                                    const docId = String(doc.id);
-                                                    setShareDocIds(prev => e.target.checked ? [...prev, docId] : prev.filter(d => d !== docId));
-                                                }}
-                                                className="rounded border-blue-300"
-                                            />
-                                            {doc.fileName}
-                                        </label>
-                                    ))}
-                                </div>
-                            :
-                                <p className="text-[11px] text-blue-500/70 font-[Lato-Regular]"> No documents uploaded to share. </p>
-                            }
+                            { closurePeerLinks.map(({ link, counterpartTitle }) => (
+                                <SharedDocumentsPanel
+                                    key={`closure-share-${link.id}`}
+                                    instanceLinkId={link.id}
+                                    sharedDocuments={link.sharedDocuments ?? []}
+                                    counterpartTitle={counterpartTitle}
+                                    mode="owner"
+                                />
+                            ))}
                         </div>
                     }
 
@@ -264,7 +295,7 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
                         <p className="text-xs font-[Lato-Bold] text-black/70"> Choose the next path </p>
                     </div>
                     { userChoiceEdges.map((edge: any) => {
-                        const targetStep = (blueprint?.steps ?? []).find(s => s.id == edge.targetId);
+                        const targetStep = (blueprint?.steps ?? []).find(s => Number(s.id) === Number(edge.targetId));
 
                         return (
                             <button key={edge.id} onClick={() => !docUploadBlocked && !notificationBlocked && onSelectStep(edge.id)} disabled={docUploadBlocked || notificationBlocked}

@@ -195,3 +195,105 @@ export const REMOVE_FORM_INSTANCE = gql`
         }
     }
 `;
+
+export const RENAME_FORM_INSTANCE = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlRenameFormInstance($id: ID!, $input: RenameFormInstanceInput!) {
+        data: gqlRenameFormInstance(id: $id, input: $input) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;
+
+/**************************************************************************** */
+/******************* TEMPLATE FIELD MAPPING QUERIES ************************* */
+/**************************************************************************** */
+
+const TEMPLATE_FIELD_MAPPING_FIELDS = gql`
+    fragment TemplateFieldMappingFields on TemplateFieldMapping {
+        id
+        sourceVersionId
+        sourceFieldStableId
+        targetVersionId
+        targetFieldStableId
+        sourceVersion {
+            id
+            versionNumber
+            template {
+                id
+                title
+            }
+            sections {
+                id
+                fields {
+                    id
+                    stableId
+                    label
+                    type
+                }
+            }
+        }
+        targetVersion {
+            id
+            versionNumber
+            template {
+                id
+                title
+            }
+            sections {
+                id
+                fields {
+                    id
+                    stableId
+                    label
+                    type
+                }
+            }
+        }
+    }
+`;
+
+export const GET_TEMPLATE_MAPPINGS_FOR_TARGET_VERSION = gql`
+    ${TEMPLATE_FIELD_MAPPING_FIELDS}
+
+    query gqlGetTemplateMappingsForTargetVersion($targetVersionId: ID!) {
+        data: gqlGetTemplateMappingsForTargetVersion(targetVersionId: $targetVersionId) {
+            ...TemplateFieldMappingFields
+        }
+    }
+`;
+
+export const GET_TEMPLATE_MAPPINGS_FOR_SOURCE_VERSION = gql`
+    ${TEMPLATE_FIELD_MAPPING_FIELDS}
+
+    query gqlGetTemplateMappingsForSourceVersion($sourceVersionId: ID!) {
+        data: gqlGetTemplateMappingsForSourceVersion(sourceVersionId: $sourceVersionId) {
+            ...TemplateFieldMappingFields
+        }
+    }
+`;
+
+/**************************************************************************** */
+/****************** TEMPLATE FIELD MAPPING MUTATIONS ************************ */
+/**************************************************************************** */
+
+export const CREATE_TEMPLATE_FIELD_MAPPING = gql`
+    ${TEMPLATE_FIELD_MAPPING_FIELDS}
+
+    mutation gqlCreateTemplateFieldMapping($input: CreateTemplateFieldMappingInput!) {
+        data: gqlCreateTemplateFieldMapping(input: $input) {
+            ...TemplateFieldMappingFields
+        }
+    }
+`;
+
+export const DELETE_TEMPLATE_FIELD_MAPPING = gql`
+    ${API_FILE_TEMPLATE_GENERIC_RESPONSE}
+
+    mutation gqlDeleteTemplateFieldMapping($id: ID!) {
+        data: gqlDeleteTemplateFieldMapping(id: $id) {
+            ...FileTemplateApiGenericResponse
+        }
+    }
+`;

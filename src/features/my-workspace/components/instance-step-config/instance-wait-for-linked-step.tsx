@@ -1,4 +1,5 @@
 import {
+    useEffect,
     type ReactElement
 } from 'react';
 import {
@@ -11,33 +12,75 @@ import {
 import {
     useWorkspaceInstanceContext
 } from '../../context/workspace-instance.context';
+import SharedDocumentsPanel from '../shared-documents-panel';
+
+/** Linked operations are considered "ready" for wait-step completion in any of these statuses. */
+const COMPLETING_STATUSES: OperationInstanceStatus[] = [
+    OperationInstanceStatus.CLOSED,
+    OperationInstanceStatus.PENDING_PAYMENT,
+    OperationInstanceStatus.PARTIALLY_CLOSED,
+];
 
 const InstanceWaitForLinkedStep = (): ReactElement => {
     /** My workspace utilities (shared via context) */
     const { dependsOnLinks } = useWorkspaceInstanceContext();
 
+    useEffect(() => {
+        console.log(dependsOnLinks);
+    }, [])
+
+    /** Sub-op links that have actually shared something back to this wait step. */
+    const linksWithShared = (dependsOnLinks as any[]).filter(l => (l.sharedDocuments ?? []).length > 0);
+
     return (
-        <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 flex items-start gap-3">
-            <Clock className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
-            <div className="flex-1">
-                <p className="text-sm font-[Lato-Bold] text-blue-700"> Waiting for linked operation </p>
-                <p className="text-xs font-[Lato-Regular] text-blue-600/70 mt-0.5 leading-relaxed">
-                    This step will auto-complete once the linked sub-operation finishes.
-                </p>
-                { dependsOnLinks.length > 0 &&
-                    <div className="mt-2 space-y-1">
-                        { dependsOnLinks.map(link => (
-                            <div key={link.id} className="flex items-center gap-1.5 text-xs text-blue-600">
-                                <ArrowRight className="w-3 h-3" />
-                                <span className="font-[Lato-Bold]"> { link.sourceLinks.sourceInstance?.title ?? `Instance #${link.sourceLinks.sourceInstance?.id}` } </span>
-                                <span className={`ml-1 text-[9px] px-1.5 py-px rounded-full font-[Lato-Regular] ${link.sourceLinks.sourceInstance?.status === OperationInstanceStatus.CLOSED ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-500"}`}>
-                                    { link.sourceLinks.sourceInstance?.status ?? "…" }
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                }
+        <div className="space-y-2">
+            <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/60 flex items-start gap-3">
+                <Clock className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                    <p className="text-sm font-[Lato-Bold] text-blue-700"> Waiting for linked operation </p>
+                    <p className="text-xs font-[Lato-Regular] text-blue-600/70 mt-0.5 leading-relaxed">
+                        This step will auto-complete once the linked sub-operation finishes.
+                    </p>
+                    { dependsOnLinks.length > 0 &&
+                        <div className="mt-3 space-y-2">
+                            { dependsOnLinks.map((link: any) => {
+                                const subOp = link.sourceInstance;
+                                const isClosed = COMPLETING_STATUSES.includes(subOp?.status as OperationInstanceStatus);
+
+                                return (
+                                    <div key={link.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-blue-100/40 border border-blue-200/60">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <ArrowRight className="w-3 h-3 text-blue-500 shrink-0" />
+                                            <span className="text-xs font-[Lato-Bold] text-blue-700 truncate">
+                                                { subOp?.title ?? `#${subOp?.id ?? link.sourceInstanceId}` }
+                                            </span>
+                                            <span className={`shrink-0 text-[9px] px-1.5 py-px rounded-full font-[Lato-Regular] ${isClosed ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-600"}`}>
+                                                { subOp?.status ?? "…" }
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    }
+                    { dependsOnLinks.length === 0 &&
+                        <p className="text-xs font-[Lato-Regular] text-blue-500/60 mt-1 italic">
+                            No sub-operation launched yet.
+                        </p>
+                    }
+                </div>
             </div>
+
+            {/* Documents the sub-operation(s) shared back to this one — viewer mode. */}
+            { linksWithShared.map((link: any) => (
+                <SharedDocumentsPanel
+                    key={`wait-shared-${link.id}`}
+                    instanceLinkId={link.id}
+                    sharedDocuments={link.sharedDocuments}
+                    counterpartTitle={link.sourceInstance?.title}
+                    mode="viewer"
+                />
+            ))}
         </div>
     );
 }

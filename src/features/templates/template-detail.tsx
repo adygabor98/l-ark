@@ -105,7 +105,8 @@ const TemplateDetail = (): ReactElement => {
                             return {
                                 ...f,
                                 options: f.options ?? [],
-                                columns
+                                columns,
+                                suffix: f.suffix ?? null
                             };
                         }),
                     }));

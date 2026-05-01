@@ -68,3 +68,23 @@ export const DELETE_OPERATION_BLUEPRINT = gql`
         }
     }
 `;
+
+export const PUBLISH_OPERATION_BLUEPRINT = gql`
+    ${API_OPERATION_RESPONSE}
+
+    mutation gqlPublishOperationBlueprint($id: ID!) {
+        data: gqlPublishOperationBlueprint(id: $id) {
+            ...OperationApiResponse
+        }
+    }
+`;
+
+export const DELETE_OPERATION_BLUEPRINT_VERSION = gql`
+    ${API_OPERATION_RESPONSE}
+
+    mutation gqlDeleteOperationBlueprintVersion($id: ID!) {
+        data: gqlDeleteOperationBlueprintVersion(id: $id) {
+            ...OperationApiResponse
+        }
+    }
+`;

@@ -104,7 +104,8 @@ export const FIELD_COLUMN_TYPES = [
     { id: TemplateComponents.DATE_TIME, label: "Date & Time", icon: CalendarClock },
     { id: TemplateComponents.BOOLEAN, label: "Boolean (Toggle)", icon: CheckSquare },
     { id: TemplateComponents.EMAIL, label: "Email", icon: AtSign },
-    { id: TemplateComponents.PHONE, label: "Phone", icon: Phone }
+    { id: TemplateComponents.PHONE, label: "Phone", icon: Phone },
+    { id: TemplateComponents.SIGNATURE, label: "Signature", icon: PenTool }
 ];
 
 export const FIELD_GROUPS = [
@@ -185,6 +186,7 @@ export interface TemplateFormSectionFieldStructure {
     type: TemplateComponents;
     width: FieldWidth;
     multiple: boolean;
+    suffix?: string | null;
 
     format?: string; // always HTML for NOW
 

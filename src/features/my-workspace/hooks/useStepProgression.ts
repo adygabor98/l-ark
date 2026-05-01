@@ -2,6 +2,7 @@ import {
 	useCallback
 } from "react";
 import {
+	LinkType,
 	OperationInstanceStatus,
 	StepInstanceStatus,
 	type ApiResponse,
@@ -20,6 +21,7 @@ import type {
 	FetchResult
 } from "@apollo/client";
 import { getStepCompletionBlockers } from "../utils/my-workspace.utils";
+import { computeVisibleSteps } from "../utils/step-visibility";
 
 interface UseStepProgressionOptions {
 	instance: OperationInstance | null;
@@ -42,7 +44,7 @@ export const useStepProgression = (props: UseStepProgressionOptions) => {
 		if ( isReadOnly || !instance || !blueprint ) return;
 
 		if ( newStatus === StepInstanceStatus.COMPLETED ) {
-			const bpStep = blueprint.steps.find(s => s.id == stepInstance.stepId);
+			const bpStep = blueprint.steps.find(s => Number(s.id) === Number(stepInstance.stepId));
 
 			if ( bpStep ) {
 				const blockers = getStepCompletionBlockers(stepInstance, bpStep as BlueprintStep);
@@ -64,26 +66,28 @@ export const useStepProgression = (props: UseStepProgressionOptions) => {
 			const response: FetchResult<{ data: ApiResponse }> = await updateStepInstance({ id: stepInstance.id, input: { status: newStatus, ...(selectedEdgeId ? { selectedEdgeId } : {}) } });
 
 			const updatedStepInstances: any = instance.stepInstances.map((si: any) =>
-				si.id == stepInstance.id ? {
+				Number(si.id) === Number(stepInstance.id) ? {
 					...si, status: newStatus,
 					...(selectedEdgeId ? { selectedEdgeId: selectedEdgeId } : {}),
-					completedAt: newStatus == StepInstanceStatus.COMPLETED ? new Date().toISOString() : null,
-					startedAt: newStatus == StepInstanceStatus.IN_PROGRESS ? new Date().toISOString() : si.startedAt
+					completedAt: newStatus === StepInstanceStatus.COMPLETED ? new Date().toISOString() : null,
+					startedAt: newStatus === StepInstanceStatus.IN_PROGRESS ? new Date().toISOString() : si.startedAt
 				} : si
 			);
 
 			const requiredStepsCompleted = updatedStepInstances.every((si: OperationInstanceStep) => {
-				const bpStep = blueprint.steps.find((s: any) => s.id == si.stepId);
+				const bpStep = blueprint.steps.find((s: any) => Number(s.id) === Number(si.stepId));
 
-				return !bpStep?.isRequired || si.status == StepInstanceStatus.COMPLETED || si.status == StepInstanceStatus.SKIPPED;
+				return !bpStep?.isRequired || si.status === StepInstanceStatus.COMPLETED || si.status === StepInstanceStatus.SKIPPED;
 			});
-			const anyActive = updatedStepInstances.some((si: OperationInstanceStep) => si.status == StepInstanceStatus.IN_PROGRESS);
+			const anyActive = updatedStepInstances.some((si: OperationInstanceStep) =>
+				si.status === StepInstanceStatus.IN_PROGRESS || si.status === StepInstanceStatus.COMPLETED
+			);
 
 			if ( requiredStepsCompleted && instance.status !== OperationInstanceStatus.COMPLETED_READY ) {
 				await updateInstanceStatus({ id: instance.id, status: OperationInstanceStatus.COMPLETED_READY });
 
 				onInstanceChange(prev => prev ? { ...prev, status: OperationInstanceStatus.COMPLETED_READY, stepInstances: updatedStepInstances } : prev);
-			} else if ( anyActive && instance.status == OperationInstanceStatus.DRAFT ) {
+			} else if ( anyActive && instance.status === OperationInstanceStatus.DRAFT ) {
 				await updateInstanceStatus({ id: instance.id, status: OperationInstanceStatus.ACTIVE });
 
 				onInstanceChange(prev => prev ? { ...prev, status: OperationInstanceStatus.ACTIVE, stepInstances: updatedStepInstances } : prev);
@@ -92,9 +96,18 @@ export const useStepProgression = (props: UseStepProgressionOptions) => {
 			}
 
 			if ( newStatus === StepInstanceStatus.COMPLETED ) {
-				const nextStep = updatedStepInstances.find((si: OperationInstanceStep) => si.status !== StepInstanceStatus.COMPLETED && si.status !== StepInstanceStatus.SKIPPED);
+				const isLaunched = !!instance.launchedFromInstanceId || (instance.sourceLinks ?? []).some(l => l.linkType === LinkType.GLOBAL_OTHER);
+
+				const visibleSteps = computeVisibleSteps({
+					stepInstances: updatedStepInstances,
+					blueprintSteps: blueprint.steps,
+					edges: blueprint.edges ?? [],
+					isLaunched,
+				});
+
+				const nextStep = visibleSteps.find((si: OperationInstanceStep) => si.status !== StepInstanceStatus.COMPLETED && si.status !== StepInstanceStatus.SKIPPED);
 				if ( nextStep )
-					onSelectStep(nextStep.id); 
+					onSelectStep(nextStep.id);
 			}
 
 			onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });

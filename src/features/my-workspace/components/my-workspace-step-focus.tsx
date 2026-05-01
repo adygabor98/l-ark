@@ -26,14 +26,7 @@ import {
 import {
     useWorkspaceInstanceContext
 } from '../context/workspace-instance.context';
-import InstanceWaitForLinkedStep from './instance-step-config/instance-wait-for-linked-step';
-import InstanceOpenOperationStep from './instance-step-config/instance-open-operation-step';
-import InstanceAllowInstanceLinkStep from './instance-step-config/instance-allow-instance-link-step';
-import InstanceNotificationStep from './instance-step-config/instance-notification-step';
-import InstanceUploadDocumentsStep from './instance-step-config/instance-upload-documents-step';
-import InstanceFileTemplatesStep from './instance-step-config/instance-file-templates-step';
-import InstanceStandardStep from './instance-step-config/instance-standard-step';
-import InstanceFooterStep from './instance-step-config/instance-footer-step';
+import StepRenderers from './step-renderers';
 
 interface PropTypes {
     isReadOnly: boolean;
@@ -123,37 +116,11 @@ const MyWorkspaceInstanceDetailStepFocus = (props: PropTypes): ReactElement => {
                 }
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                { stepType === StepType.WAIT_FOR_LINKED &&
-                    <InstanceWaitForLinkedStep />
-                }
-
-                { stepType === StepType.OPEN_OPERATION &&
-                    <InstanceOpenOperationStep isReadOnly={isReadOnly} />
-                }
-
-                { selectedBlueprintStep.allowInstanceLink && !isReadOnly &&
-                    <InstanceAllowInstanceLinkStep />
-                }
-
-                { stepType === StepType.NOTIFICATION && selectedBlueprintStep.notificationPersons?.length > 0 &&
-                    <InstanceNotificationStep isReadOnly={isReadOnly} />
-                }
-
-                { ((selectedBlueprintStep.expectedDocuments ?? []).filter(doc => doc)?.length > 0 || selectedBlueprintStep.allowDocumentUpload) &&
-                    <InstanceUploadDocumentsStep instanceId={instance?.id ? instance.id : null} isReadOnly={isReadOnly} />
-                }
-
-                { selectedBlueprintStep.fileTemplates?.length > 0 &&
-                    <InstanceFileTemplatesStep isReadOnly={isReadOnly} />
-                }
-
-                { stepType === StepType.STANDARD && !selectedBlueprintStep.allowDocumentUpload && selectedBlueprintStep.fileTemplates?.length === 0 && !selectedBlueprintStep.allowInstanceLink &&
-                    <InstanceStandardStep />
-                }
-
-                { !isReadOnly && stepType !== StepType.OPEN_OPERATION &&
-                    <InstanceFooterStep isReadOnly={isReadOnly} />
-                }
+                <StepRenderers
+                    blueprintStep={selectedBlueprintStep}
+                    instance={instance}
+                    isReadOnly={isReadOnly}
+                />
             </div>
         </>
     );

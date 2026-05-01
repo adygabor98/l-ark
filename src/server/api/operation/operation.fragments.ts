@@ -30,6 +30,12 @@ export const BLUEPRINT_SUMMARY_FIELDS = gql`
             id
         }
 
+        latestVersion {
+            id
+            versionNumber
+            status
+        }
+
         prerequisites {
             id
             requiredBlueprintId
@@ -73,7 +79,8 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
 
         steps {
             id
-            blueprintId
+            stableId
+            blueprintVersionId
             title
             description
             sortOrder
@@ -85,6 +92,11 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
             stepType
             waitForLinkedType
             openBlueprintIds
+            openBlueprints {
+                id
+                title
+                subType
+            }
             conditionalVisibility
             allowInstanceLink
             notificationPersons
@@ -106,11 +118,17 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
 
         edges {
             id
-            blueprintId
+            blueprintVersionId
             sourceId
             targetId
             label
             conditionType
+        }
+
+        latestVersion {
+            id
+            versionNumber
+            status
         }
 
         prerequisites {
@@ -140,6 +158,19 @@ export const INSTANCE_SUMMARY_FIELDS = gql`
             type
             subType
             maxGlobalOperations
+            steps {
+                id
+                stableId
+                stepType
+                conditionalVisibility
+                sortOrder
+            }
+            edges {
+                id
+                sourceId
+                targetId
+                conditionType
+            }
         }
 
         officeId
@@ -157,6 +188,7 @@ export const INSTANCE_SUMMARY_FIELDS = gql`
 
         status
         updatedAt
+        launchedFromInstanceId
 
         createdBy {
             id
@@ -172,17 +204,23 @@ export const INSTANCE_SUMMARY_FIELDS = gql`
 
         stepInstances {
             id
+            stepId
             status
+            selectedEdgeId
         }
 
         sourceLinks {
             id
             linkType
+            sourceInstanceId
+            targetInstanceId
         }
 
         targetLinks {
             id
             linkType
+            sourceInstanceId
+            targetInstanceId
         }
     }
 `;
@@ -195,6 +233,7 @@ export const INSTANCE_DETAIL_FIELDS = gql`
         code
 
         blueprintId
+        blueprintVersionId
         blueprint {
             id
             title
@@ -312,6 +351,7 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 formInstance {
                     id
                     status
+                    displayName
                     updatedAt
                     templateVersionId
                     templateVersion {
@@ -332,6 +372,42 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 status
                 blueprintId
             }
+            sharedDocuments {
+                id
+                instanceLinkId
+                formInstanceId
+                documentId
+                createdAt
+                formInstance {
+                    id
+                    displayName
+                    status
+                    templateVersionId
+                    templateVersion {
+                        templateId
+                        template {
+                            id
+                            title
+                        }
+                    }
+                    stepInstanceForms {
+                        stepInstance {
+                            instanceId
+                        }
+                    }
+                }
+                document {
+                    id
+                    fileName
+                    fileSize
+                    mimeType
+                    stepInstanceId
+                    createdAt
+                    stepInstance {
+                        instanceId
+                    }
+                }
+            }
         }
 
         targetLinks {
@@ -343,6 +419,42 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 title
                 code
                 status
+            }
+            sharedDocuments {
+                id
+                instanceLinkId
+                formInstanceId
+                documentId
+                createdAt
+                formInstance {
+                    id
+                    displayName
+                    status
+                    templateVersionId
+                    templateVersion {
+                        templateId
+                        template {
+                            id
+                            title
+                        }
+                    }
+                    stepInstanceForms {
+                        stepInstance {
+                            instanceId
+                        }
+                    }
+                }
+                document {
+                    id
+                    fileName
+                    fileSize
+                    mimeType
+                    stepInstanceId
+                    createdAt
+                    stepInstance {
+                        instanceId
+                    }
+                }
             }
         }
     }

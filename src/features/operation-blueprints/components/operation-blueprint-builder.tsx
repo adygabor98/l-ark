@@ -8,7 +8,8 @@ import {
     EdgeConditionType,
     type OperationBlueprintInput,
     type OperationBlueprintStepEdgeInput,
-    type OperationBlueprintStepInput
+    type OperationBlueprintStepInput,
+    type OperationBlueprintVersionInfo
 } from '@l-ark/types';
 import {
     useFormContext,
@@ -34,6 +35,7 @@ import OperationBlueprintFlowEditor from './opertion-blueprint-flow-editor';
 
 interface PropTypes {
     blueprintId: number;
+    latestVersion?: OperationBlueprintVersionInfo | null;
 
     onBack: () => void;
     onPublish: () => void;
@@ -44,7 +46,7 @@ interface PropTypes {
 
 const OperationBlueprintBuilder = (props: PropTypes): ReactElement => {
     /** Retrieve component properties */
-    const { blueprintId, onBack, onPublish, onSaveDraft, onDelete } = props;
+    const { blueprintId, latestVersion, onBack, onPublish, onSaveDraft, onDelete } = props;
     /** Form context */
     const { control, getValues, setValue } = useFormContext<OperationBlueprintInput>();
     const watchedTitle = useWatch({ control, name: 'title' });
@@ -176,6 +178,7 @@ const OperationBlueprintBuilder = (props: PropTypes): ReactElement => {
             {/* Header */}
             <OperationBlueprintHeader
                 operationId={blueprintId}
+                latestVersion={latestVersion}
                 title={watchedTitle}
                 description={watchedDescription}
                 onBack={onBack}

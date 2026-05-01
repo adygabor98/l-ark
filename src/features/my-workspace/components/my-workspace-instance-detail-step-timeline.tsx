@@ -2,9 +2,6 @@ import {
     type ReactElement
 } from 'react';
 import {
-    useNavigate
-} from 'react-router-dom';
-import {
     ArrowRight,
     CheckCircle2,
     Circle,
@@ -35,15 +32,8 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
     const { isReadOnly, progress } = props;
     /** Operation Instance api utilities (shared via context) */
     const { instance, blueprint, visibleStepInstances, selectedStepInstanceId, launchedFromInstance, setSelectedStepInstanceId } = useWorkspaceInstanceContext();
-    /** Navigation utilities */
-    const navigate = useNavigate();
 
-    /** Manage to redirect the user to another other/global instance */
-    const goToInstanceLinked = (id: number): void => {
-        navigate(`/workspace/detail/${id}`)
-    }
-
-    return (
+	return (
         <div className="w-68 shrink-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
 			<div className="px-4 py-3 border-b border-black/6 flex items-center justify-between">
 				<h3 className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Steps </h3>
@@ -59,13 +49,11 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
 						<span className="text-[10px] font-[Lato-Bold] text-blue-600 uppercase tracking-widest"> Launched By </span>
 					</div>
 
-					<button onClick={() => goToInstanceLinked(launchedFromInstance.id as number)}
-						className="w-full text-left px-2 py-1.5 rounded-lg hover:bg-blue-100/60 transition-colors cursor-pointer flex items-center gap-2"
-					>
+					<div className="w-full text-left px-2 py-1.5 rounded-lg flex items-center gap-2">
 						<span className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0" />
 						<span className="text-xs font-[Lato-Regular] text-blue-600 truncate flex-1"> { launchedFromInstance.title } </span>
 						<ArrowRight className="w-3 h-3 text-blue-400 shrink-0" />
-					</button>
+					</div>
 				</div>
 			}
 
@@ -73,14 +61,14 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
 			<div className="flex-1 overflow-y-auto p-2">
 				<div className="space-y-0.5">
 					{ visibleStepInstances.map((si, idx) => {
-						const bpStep = (blueprint?.steps ?? []).find(s => s.id == si.stepId);
+						const bpStep = (blueprint?.steps ?? []).find(s => Number(s.id) === Number(si.stepId));
 						if ( !bpStep ) return null;
 
-						const isSelected = si.id == selectedStepInstanceId;
-						const isCompleted = si.status == StepInstanceStatus.COMPLETED;
-						const isActive = si.status == StepInstanceStatus.IN_PROGRESS;
-						const isSkipped = si.status == StepInstanceStatus.SKIPPED;
-						const isPending = si.status == StepInstanceStatus.PENDING;
+						const isSelected = Number(si.id) === Number(selectedStepInstanceId);
+						const isCompleted = si.status === StepInstanceStatus.COMPLETED;
+						const isActive = si.status === StepInstanceStatus.IN_PROGRESS;
+						const isSkipped = si.status === StepInstanceStatus.SKIPPED;
+						const isPending = si.status === StepInstanceStatus.PENDING;
 						const isBlocked = isPending && !canStartStep(si, blueprint as OperationBlueprintDetail, instance as OperationInstance, isReadOnly);
 						const isLast = idx === visibleStepInstances.length - 1;
 

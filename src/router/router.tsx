@@ -42,9 +42,10 @@ import RolesPermissionsManagement from "../features/roles/roles-permissions.mana
 import TemplatesManagement from "../features/templates/templates.management";
 import TemplateDetail from "../features/templates/template-detail";
 import ExportLayoutPage from "../features/templates/export-layout/export-layout.page";
+import FieldMappingsPage from "../features/templates/field-mappings/field-mappings.page";
 
 import OperationBlueprintsManagement from "../features/operation-blueprints/operation-blueprints-management";
-import OperationBlueprintDetail from "../features/operation-blueprints/operation-blueprint-detail";
+import OperationBlueprintDetailPage from "../features/operation-blueprints/operation-blueprint-detail";
 import MyWorkspaceManagement from "../features/my-workspace/my-workspace-management";
 import MyWorkspaceNewInstance from "../features/my-workspace/my-workspace-new-instance";
 import MyWorkspaceDetail from "../features/my-workspace/my-workspace-detail";
@@ -243,7 +244,7 @@ export const globalRoutes = [
 							<Suspense fallback={<Loading />}>
 								<ProtectedRoute>
 									<RootLayout>
-										<OperationBlueprintDetail />
+										<OperationBlueprintDetailPage />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>
@@ -326,6 +327,18 @@ export const globalRoutes = [
 								<ProtectedRoute>
 									<RootLayout>
 									<ExportLayoutPage />
+									</RootLayout>
+								</ProtectedRoute>
+							</Suspense>
+						)
+					},
+					{
+						path: "field-mappings/:templateId/:versionId",
+						element: (
+							<Suspense fallback={<Loading />}>
+								<ProtectedRoute>
+									<RootLayout>
+									<FieldMappingsPage />
 									</RootLayout>
 								</ProtectedRoute>
 							</Suspense>

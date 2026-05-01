@@ -10,9 +10,7 @@ import {
     Eye,
     EyeOff,
     FileText,
-    Image as ImageIcon,
     LayoutGrid,
-    CheckSquare,
 } from 'lucide-react';
 import { FieldUnderline, EmptyState, PreviewCheckbox, PreviewRadio } from './preview-primitives';
 import {
@@ -34,7 +32,6 @@ import type {
     PageSlice,
     FormGridCell,
     FieldGridEntry,
-    CheckboxGridItem,
 } from '../../export-layout.models';
 import {
     PAGE_DIMS,
@@ -104,10 +101,12 @@ const ZONE_PREVIEW_EXTENSIONS = [
  * table preview so empty tables read as "this is what data looks like" rather
  * than a broken placeholder. Row 2 gets a faded variant to imply more data.
  */
-const sampleForColumn = (columnName: string, rowIdx: number): string => {
+const sampleForColumn = (columnName: string, rowIdx: number, colType?: string): string => {
     // Export intent: empty cells. No "John Doe" / "$1,250.00" leaking into
     // printed PDFs.
     if (getRenderIntent() === 'export') return '';
+    // Signature columns: show a blank signature line placeholder
+    if (colType === 'SIGNATURE') return rowIdx === 1 ? '─────────────' : '─────────────';
     const n = columnName.toLowerCase();
     // Currency / money
     if (/(amount|price|total|cost|fee|balance|subtotal|tax|discount)/.test(n)) {
@@ -378,64 +377,6 @@ const FieldGridPreview = ({ block }: { block: ExportBlock }): ReactElement => {
     );
 };
 
-// Checkbox grid preview
-const CheckboxGridPreview = ({ block }: { block: ExportBlock }): ReactElement => {
-    const { state } = useExportLayout();
-    const items = block.settings.checkboxItems ?? [];
-    const columns = block.settings.checkboxColumns ?? 4;
-    const showBorders = block.settings.checkboxShowBorders ?? true;
-    const borderColor = block.settings.checkboxBorderColor ?? '#e5e7eb';
-    const compact = block.settings.checkboxCompact ?? false;
-    const style = block.settings.checkboxStyle ?? 'checkbox';
-    const showTitle = block.settings.checkboxShowTitle ?? false;
-    const title = block.settings.checkboxTitle ?? '';
-
-    if (items.length === 0) {
-        return <EmptyState icon={<CheckSquare className="w-3.5 h-3.5" />} label="Empty checkbox grid" />;
-    }
-
-    const getLabel = (item: CheckboxGridItem): string => {
-        if (item.customLabel) return item.customLabel;
-        if (item.fieldId) return state.tokens.find(t => t.fieldId === item.fieldId)?.fieldLabel ?? '';
-        return '';
-    };
-
-    const isRadio = (item: CheckboxGridItem): boolean => {
-        if (style === 'radio') return true;
-        if (style === 'checkbox') return false;
-        return item.isRadio ?? false;
-    };
-
-    return (
-        <div style={{ border: showBorders ? `1px solid ${borderColor}` : 'none' }} className="overflow-hidden">
-            { showTitle && title &&
-                <div className="px-3 py-1 text-xs font-[Lato-Regular] text-black/60 bg-black/3"
-                    style={{ borderBottom: showBorders ? `1px solid ${borderColor}` : 'none' }}
-                >
-                    {title}
-                </div>
-            }
-            <div className="grid text-xs" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
-                { items.map(item => {
-                    const label = getLabel(item);
-                    const radio = isRadio(item);
-                    return (
-                        <div key={item.id}
-                            className={showBorders ? 'border-b border-r last:border-r-0' : ''}
-                            style={{ borderColor, padding: compact ? '3px 6px' : '5px 8px' }}
-                        >
-                            <div className="flex items-center gap-1.5">
-                                { radio ? <PreviewRadio /> : <PreviewCheckbox /> }
-                                <span className="text-black/60 truncate">{label}</span>
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
 // Form grid cell content (preview)
 const FormGridCellPreview = ({ cell, tokens }: { cell: FormGridCell; tokens: { fieldId: string; fieldLabel: string; fieldType: string }[] }): ReactElement => {
     const field = cell.fieldId ? tokens.find(t => t.fieldId === cell.fieldId) : undefined;
@@ -564,9 +505,9 @@ const BlockPreview = ({ block, forPrint }: { block: ExportBlock; forPrint?: bool
                     .filter(tc => tc.visible)
                     .map(tc => {
                         const raw = rawCols.find(c => c.id === tc.colId);
-                        return { id: tc.colId, name: raw?.name ?? tc.label, widthPct: tc.widthPct };
+                        return { id: tc.colId, name: raw?.name ?? tc.label, widthPct: tc.widthPct, type: raw?.type };
                     })
-                : rawCols.map(c => ({ id: c.id, name: c.name, widthPct: undefined }));
+                : rawCols.map(c => ({ id: c.id, name: c.name, widthPct: undefined, type: c.type }));
             const hasColumns = displayCols.length > 0;
 
             const hasBorder = block.settings.borderStyle !== 'none';
@@ -599,7 +540,7 @@ const BlockPreview = ({ block, forPrint }: { block: ExportBlock; forPrint?: bool
                                     { hasColumns ?
                                         displayCols.map(col => (
                                             <div key={col.id} className="px-3 py-2 truncate" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
-                                                { sampleForColumn(col.name, i) }
+                                                { sampleForColumn(col.name, i, col.type) }
                                             </div>
                                         ))
                                     :
@@ -614,29 +555,12 @@ const BlockPreview = ({ block, forPrint }: { block: ExportBlock; forPrint?: bool
                 </div>
             );
         }
-        case 'IMAGE':
-            return block.imageUrl ?
-                <div style={{ textAlign: block.settings.imageAlignment ?? 'left' }}>
-                    <img src={block.imageUrl} alt="Document image" style={{ width: block.settings.imageWidth ?? 200, display: 'inline-block' }} className="max-w-full" />
-                </div>
-            :
-                <div className="border border-black/10 bg-black/2 rounded-lg h-24 flex flex-col items-center justify-center gap-1 text-black/40">
-                    <ImageIcon className="w-5 h-5 opacity-70" />
-                    <span className="text-[11px] font-[Lato-Regular]">Image placeholder</span>
-                </div>
-            ;
         case 'SIGNATURE':
             return <SignaturePadPreview block={block} forPrint={forPrint} />;
         case 'FIELD_GRID':
             return <FieldGridPreview block={block} />;
-        case 'CHECKBOX_GRID':
-            return <CheckboxGridPreview block={block} />;
         case 'FORM_GRID':
             return <FormGridPreview block={block} />;
-        case 'DIVIDER':
-            return <hr style={{ borderTopWidth: block.settings.lineWeight ?? 1, borderColor: block.settings.lineColor ?? '#e5e7eb', borderStyle: 'solid' }} />;
-        case 'PAGE_BREAK':
-            return null;
         case 'BLANK':
             return <div />;
         default:
@@ -847,8 +771,7 @@ const PreviewMode = ({ forPrint = false }: { forPrint?: boolean } = {}): ReactEl
     const wmColor   = pageConfig.watermarkColor ?? '#000000';
     const wmOpacity = pageConfig.watermarkOpacity ?? WATERMARK_DEFAULT_OPACITY;
 
-    // Filter out PAGE_BREAK rows for measurement
-    const contentRows = useMemo(() => rows.filter(r => !r.cells.some(c => c.block.type === 'PAGE_BREAK')), [rows]);
+    const contentRows = useMemo(() => rows, [rows]);
 
     // Measurement refs
     const rowMeasureRef = useRef<HTMLDivElement>(null);
@@ -904,13 +827,6 @@ const PreviewMode = ({ forPrint = false }: { forPrint?: boolean } = {}): ReactEl
 
         for (let i = 0; i < rows.length; i++) {
             const row = rows[i];
-
-            // Explicit page break → start a new page
-            if ( row.cells.some(c => c.block.type === 'PAGE_BREAK') ) {
-                result.push({ rows: [], yOffset: 0 });
-                currentHeight = 0;
-                continue;
-            }
 
             const rowH = heights[contentIdx] || 40;
             const gap  = result[result.length - 1].rows.length > 0 ? ROW_GAP_PX : 0;

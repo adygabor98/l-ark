@@ -1,4 +1,5 @@
 import type {
+    AvailableToken,
     ExportBlock,
     ExportPageConfig,
     ExportRow
@@ -195,14 +196,18 @@ function cleanTagsInPlace(obj: any): void {
 
 function cleanTiptap(node: any): void {
     if (!node || typeof node !== 'object') return;
-    if (node.type === 'fieldToken' && node.attrs) {
-        if (node.attrs.__orphaned === true || node.attrs.__incompatible === true) {
-            node.attrs.fieldId = '';
-            node.attrs.fallbackText = node.attrs.fallbackText ?? '(removed)';
-        }
-        cleanTagsInPlace(node.attrs);
+    if (Array.isArray(node.content)) {
+        // Remove orphaned / incompatible fieldToken nodes entirely instead of
+        // blanking them out — the user wants stale tokens gone, not "(removed)".
+        node.content = node.content.filter((child: any) => {
+            if (child?.type === 'fieldToken' && child.attrs &&
+                (child.attrs.__orphaned === true || child.attrs.__incompatible === true)) {
+                return false;
+            }
+            return true;
+        });
+        node.content.forEach(cleanTiptap);
     }
-    if (Array.isArray(node.content)) node.content.forEach(cleanTiptap);
 }
 
 function cleanBlock(block: ExportBlock): ExportBlock {
@@ -287,4 +292,129 @@ export function stripLayoutIssues(
     }
 
     return { rows: cleanedRows, pageConfig: cleanedPageConfig };
+}
+
+// ── Client-side reconciliation ────────────────────────────────────────────────
+
+/**
+ * Walk the whole layout and flag every field reference that no longer
+ * exists in the current token list. This mirrors what the backend
+ * `reconcileLayoutForVersion` does on version bumps, but runs client-side
+ * so the designer catches stale references even when the user edits fields
+ * without creating a new version.
+ *
+ * Only adds flags — never removes them. Already-flagged nodes are left alone.
+ */
+
+function flagTiptapOrphans(node: any, tokenIds: Set<string>): void {
+    if (!node || typeof node !== 'object') return;
+    if (node.type === 'fieldToken' && node.attrs) {
+        const fid = node.attrs.fieldId;
+        if (fid && !tokenIds.has(String(fid)) && !node.attrs.__orphaned && !node.attrs.__incompatible) {
+            node.attrs.__orphaned = true;
+        }
+    }
+    if (Array.isArray(node.content)) node.content.forEach((child: any) => flagTiptapOrphans(child, tokenIds));
+}
+
+function flagBlockOrphans(block: ExportBlock, tokens: AvailableToken[], tokenIds: Set<string>): ExportBlock {
+    const b: any = { ...block, settings: { ...(block.settings ?? {}) } };
+    const s: any = b.settings;
+
+    // Block-level sourceFieldId (TABLE, SIGNATURE, FIELD_GRID…)
+    if (b.sourceFieldId && !tokenIds.has(String(b.sourceFieldId)) && !b.__orphaned && !b.__incompatible) {
+        b.__orphaned = true;
+    }
+
+    // FIELD_GRID entries
+    if (Array.isArray(s.gridEntries)) {
+        s.gridEntries = s.gridEntries.map((entry: any) => {
+            if (!entry?.fieldId || tokenIds.has(String(entry.fieldId))) return entry;
+            if (entry.__orphaned || entry.__incompatible) return entry;
+            return { ...entry, __orphaned: true };
+        });
+    }
+
+    // TABLE column references — check both parent field and individual columns
+    if (Array.isArray(s.tableColumns)) {
+        const parentToken = b.sourceFieldId ? tokens.find((t: AvailableToken) => t.fieldId === String(b.sourceFieldId)) : null;
+        const validColIds = new Set((parentToken?.columns ?? []).map((c: any) => String(c.id)));
+        s.tableColumns = s.tableColumns.map((col: any) => {
+            if (!col?.colId || col.__orphaned || col.__incompatible) return col;
+            // Parent field already orphaned — don't double-flag columns
+            if (b.__orphaned) return col;
+            // Column ID no longer exists in the parent field's columns
+            if (parentToken && !validColIds.has(String(col.colId))) {
+                return { ...col, __orphaned: true, __reason: 'column-removed' };
+            }
+            return col;
+        });
+    }
+
+    // CHECKBOX_GRID items
+    if (Array.isArray(s.checkboxItems)) {
+        s.checkboxItems = s.checkboxItems.map((item: any) => {
+            if (!item?.fieldId || tokenIds.has(String(item.fieldId))) return item;
+            if (item.__orphaned || item.__incompatible) return item;
+            return { ...item, __orphaned: true };
+        });
+    }
+
+    // FORM_GRID cells
+    if (Array.isArray(s.formGridRows)) {
+        s.formGridRows = s.formGridRows.map((row: any) => {
+            if (!Array.isArray(row?.cells)) return row;
+            return {
+                ...row,
+                cells: row.cells.map((cell: any) => {
+                    if (!cell?.fieldId || tokenIds.has(String(cell.fieldId))) return cell;
+                    if (cell.__orphaned || cell.__incompatible) return cell;
+                    return { ...cell, __orphaned: true };
+                }),
+            };
+        });
+    }
+
+    // RICH_TEXT TipTap content
+    if (b.content) {
+        const content = JSON.parse(JSON.stringify(b.content));
+        flagTiptapOrphans(content, tokenIds);
+        b.content = content;
+    }
+
+    return b as ExportBlock;
+}
+
+/**
+ * Client-side pass: compare all field references in the layout against the
+ * live token list and mark any that are missing as `__orphaned`. Safe to call
+ * repeatedly — already-flagged nodes are untouched.
+ */
+export function reconcileLayoutAgainstTokens(
+    rows: ExportRow[],
+    pageConfig: ExportPageConfig,
+    tokens: AvailableToken[]
+): { rows: ExportRow[]; pageConfig: ExportPageConfig } {
+    if (tokens.length === 0) return { rows, pageConfig };
+
+    const tokenIds = new Set(tokens.map(t => String(t.fieldId)));
+
+    const flaggedRows = rows.map(row => ({
+        ...row,
+        cells: row.cells.map(cell => ({ ...cell, block: flagBlockOrphans(cell.block, tokens, tokenIds) })),
+    }));
+
+    const flaggedPageConfig: ExportPageConfig = { ...pageConfig };
+    if (pageConfig.headerContent) {
+        const header = JSON.parse(JSON.stringify(pageConfig.headerContent));
+        flagTiptapOrphans(header, tokenIds);
+        flaggedPageConfig.headerContent = header;
+    }
+    if (pageConfig.footerContent) {
+        const footer = JSON.parse(JSON.stringify(pageConfig.footerContent));
+        flagTiptapOrphans(footer, tokenIds);
+        flaggedPageConfig.footerContent = footer;
+    }
+
+    return { rows: flaggedRows, pageConfig: flaggedPageConfig };
 }

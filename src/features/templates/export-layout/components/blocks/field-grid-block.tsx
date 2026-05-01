@@ -9,9 +9,6 @@ import {
     Grid,
     AtSign,
     Type,
-    CheckSquare,
-    Circle,
-    Minus,
     GripVertical,
     ChevronDown,
     ChevronUp
@@ -33,11 +30,7 @@ interface FieldGridBlockProps {
 }
 
 const ENTRY_TYPE_OPTIONS: { value: FieldGridEntryType; label: string; Icon: typeof Type }[] = [
-    { value: 'field', label: 'Field', Icon: AtSign },
-    { value: 'custom', label: 'Custom', Icon: Type },
-    { value: 'checkbox', label: 'Checkbox', Icon: CheckSquare },
-    { value: 'radio', label: 'Radio', Icon: Circle },
-    { value: 'spacer', label: 'Spacer', Icon: Minus },
+    { value: 'field', label: 'Field', Icon: AtSign }
 ];
 
 /** Single entry row in the editor list */
@@ -52,7 +45,7 @@ const EntryEditor = ({
     isLast,
 }: {
     entry: FieldGridEntry;
-    tokens: { fieldId: string; fieldLabel: string; fieldType: string; sectionTitle: string }[];
+    tokens: { fieldId: string; fieldLabel: string; fieldType: string; sectionTitle: string; suffix?: string | null }[];
     onUpdate: (patch: Partial<FieldGridEntry>) => void;
     onRemove: () => void;
     onMoveUp: () => void;
@@ -62,19 +55,17 @@ const EntryEditor = ({
 }): ReactElement => {
     const [expanded, setExpanded] = useState(false);
 
-    const field = entry.fieldId ? tokens.find(t => t.fieldId === entry.fieldId) : undefined;
-
     return (
-        <div className="border border-black/8 bg-white overflow-hidden">
-            {/* Compact row */}
-            <div className="flex items-center gap-1.5 px-2 py-1.5">
-                <GripVertical className="w-3 h-3 text-black/20 shrink-0 cursor-grab" />
+        <div className="border border-black/10 bg-white rounded-lg overflow-hidden shadow-sm">
+            {/* Main row */}
+            <div className="flex items-center gap-2 px-3 py-2.5">
+                <GripVertical className="w-4 h-4 text-black/25 shrink-0 cursor-grab" />
 
-                {/* Type badge */}
+                {/* Type selector */}
                 <select
                     value={entry.type}
                     onChange={e => onUpdate({ type: e.target.value as FieldGridEntryType })}
-                    className="text-[10px] bg-black/4 border-0 rounded px-1 py-0.5 text-black/50 outline-none cursor-pointer"
+                    className="text-xs bg-violet-50 border border-violet-200 rounded-md px-2 py-1.5 text-violet-700 font-[Lato-Regular] outline-none cursor-pointer focus:border-violet-400 shrink-0"
                 >
                     { ENTRY_TYPE_OPTIONS.map(o => (
                         <option key={o.value} value={o.value}>{o.label}</option>
@@ -82,124 +73,84 @@ const EntryEditor = ({
                 </select>
 
                 {/* Main content input */}
-                { entry.type === 'field' &&
-                    <select
-                        value={entry.fieldId ?? ''}
-                        onChange={e => onUpdate({ fieldId: e.target.value || undefined })}
-                        className="flex-1 text-xs border border-black/10 rounded px-1.5 py-0.5 outline-none focus:border-violet-400 min-w-0"
+                <select value={entry.fieldId ?? ''} onChange={e => onUpdate({ fieldId: e.target.value || undefined })}
+                    className="flex-1 h-8 text-sm border border-black/12 rounded-md px-2.5 py-1.5 outline-none focus:border-violet-400 min-w-0 text-black/70"
+                >
+                    <option value="">— Select field —</option>
+                    { tokens.map(t => (
+                        <option key={t.fieldId} value={t.fieldId}>{t.fieldLabel} ({t.sectionTitle})</option>
+                    ))}
+                </select>
+
+                {/* Actions */}
+                <div className="flex items-center gap-1 shrink-0">
+                    <button
+                        onClick={onMoveUp}
+                        disabled={isFirst}
+                        className="p-1.5 rounded-md text-black/25 hover:text-black/60 hover:bg-black/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        title="Move up"
                     >
-                        <option value="">— Select field —</option>
-                        { tokens.map(t => (
-                            <option key={t.fieldId} value={t.fieldId}>{t.fieldLabel} ({t.sectionTitle})</option>
-                        ))}
-                    </select>
-                }
-
-                { (entry.type === 'checkbox' || entry.type === 'radio') &&
-                    <select
-                        value={entry.fieldId ?? ''}
-                        onChange={e => onUpdate({ fieldId: e.target.value || undefined })}
-                        className="flex-1 text-xs border border-black/10 rounded px-1.5 py-0.5 outline-none focus:border-violet-400 min-w-0"
-                    >
-                        <option value="">— Select field —</option>
-                        { tokens
-                            .filter(t => entry.type === 'checkbox'
-                                ? ['BOOLEAN', 'CHECKBOX'].includes(t.fieldType)
-                                : ['RADIO_GROUP', 'SELECT'].includes(t.fieldType)
-                            )
-                            .map(t => (
-                                <option key={t.fieldId} value={t.fieldId}>{t.fieldLabel} ({t.sectionTitle})</option>
-                            ))
-                        }
-                    </select>
-                }
-
-                { entry.type === 'custom' &&
-                    <input
-                        value={entry.customLabel ?? ''}
-                        onChange={e => onUpdate({ customLabel: e.target.value })}
-                        placeholder="Label"
-                        className="flex-1 text-xs border border-black/10 rounded px-1.5 py-0.5 outline-none focus:border-violet-400 min-w-0"
-                    />
-                }
-
-                { entry.type === 'spacer' &&
-                    <span className="flex-1 text-[10px] text-black/30 italic">Empty spacer cell</span>
-                }
-
-                {/* Expand / actions */}
-                <div className="flex items-center gap-0.5 shrink-0">
-                    { !isFirst &&
-                        <button onClick={onMoveUp} className="text-black/20 hover:text-black/50 p-0.5" title="Move up">
-                            <ChevronUp className="w-3 h-3" />
-                        </button>
-                    }
-                    { !isLast &&
-                        <button onClick={onMoveDown} className="text-black/20 hover:text-black/50 p-0.5" title="Move down">
-                            <ChevronDown className="w-3 h-3" />
-                        </button>
-                    }
-                    <button onClick={() => setExpanded(v => !v)}
-                        className={`text-black/20 hover:text-black/50 p-0.5 ${expanded ? 'text-violet-500' : ''}`}
-                        title="Settings"
-                    >
-                        <Grid className="w-3 h-3" />
+                        <ChevronUp className="w-4 h-4" />
                     </button>
-                    <button onClick={onRemove} className="text-red-200 hover:text-red-500 p-0.5" title="Remove">
-                        <Trash2 className="w-3 h-3" />
+                    <button
+                        onClick={onMoveDown}
+                        disabled={isLast}
+                        className="p-1.5 rounded-md text-black/25 hover:text-black/60 hover:bg-black/5 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                        title="Move down"
+                    >
+                        <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => setExpanded(v => !v)}
+                        className={`p-1.5 rounded-md transition-colors ${expanded ? 'text-violet-600 bg-violet-50' : 'text-black/25 hover:text-violet-500 hover:bg-violet-50'}`}
+                        title="Options"
+                    >
+                        <Grid className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={onRemove}
+                        className="p-1.5 rounded-md text-black/20 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Remove"
+                    >
+                        <Trash2 className="w-4 h-4" />
                     </button>
                 </div>
             </div>
 
-            {/* Expanded settings */}
+            {/* Expanded options */}
             { expanded &&
-                <div className="px-3 py-2 border-t border-black/6 bg-black/2 flex flex-wrap gap-3 text-[10px]">
-                    { entry.type === 'custom' &&
-                        <label className="flex items-center gap-1">
-                            <span className="text-black/40">Value:</span>
+                <div className="w-full px-4 py-3 border-t border-black/6 bg-black/2 gap-3">
+                    <div className='w-full flex items-center justify-around gap-3'>
+                        <label className="w-full flex items-center gap-2 cursor-pointer col-span-2">
                             <input
-                                value={entry.customValue ?? ''}
-                                onChange={e => onUpdate({ customValue: e.target.value })}
-                                placeholder="Value text"
-                                className="border border-black/10 rounded px-1.5 py-0.5 outline-none text-[10px] w-24"
+                                type="checkbox"
+                                checked={entry.labelBold ?? false}
+                                onChange={e => onUpdate({ labelBold: e.target.checked })}
+                                className="accent-amber-500 w-4 h-4 shrink-0"
+                            />
+                            <span className="text-sm text-black/60 font-bold">Bold label</span>
+                        </label>
+
+                        <label className="w-full flex flex-col gap-1">
+                            <span className="text-xs text-black/50 font-[Lato-Regular]">Colspan</span>
+                            <input type="number" min={1} max={8} value={entry.colSpan ?? 1}
+                                onChange={e => onUpdate({ colSpan: Math.max(1, Math.min(8, parseInt(e.target.value) || 1)) })}
+                                className="w-full h-7.5 border border-black/12 rounded-md px-2.5 py-1.5 text-center text-sm focus:border-violet-400 outline-none"
                             />
                         </label>
-                    }
 
-                    <label className="flex items-center gap-1">
-                        <input
-                            type="checkbox"
-                            checked={entry.labelBold ?? false}
-                            onChange={e => onUpdate({ labelBold: e.target.checked })}
-                            className="accent-amber-500"
-                        />
-                        <span className="text-black/50 font-bold">Bold label</span>
-                    </label>
-
-                    <label className="flex items-center gap-1">
-                        <span className="text-black/40">Colspan:</span>
-                        <input
-                            type="number"
-                            min={1}
-                            max={8}
-                            value={entry.colSpan ?? 1}
-                            onChange={e => onUpdate({ colSpan: Math.max(1, Math.min(8, parseInt(e.target.value) || 1)) })}
-                            className="border border-black/10 rounded px-1 py-0.5 w-10 text-center"
-                        />
-                    </label>
-
-                    <label className="flex items-center gap-1">
-                        <span className="text-black/40">Label align:</span>
-                        <select
-                            value={entry.labelAlign ?? 'left'}
-                            onChange={e => onUpdate({ labelAlign: e.target.value as 'left' | 'center' | 'right' })}
-                            className="border border-black/10 rounded px-1 py-0.5"
-                        >
-                            <option value="left">Left</option>
-                            <option value="center">Center</option>
-                            <option value="right">Right</option>
-                        </select>
-                    </label>
+                        <label className="w-full flex flex-col gap-1">
+                            <span className="text-xs text-black/50 font-[Lato-Regular]">Label align</span>
+                            <select value={entry.labelAlign ?? 'left'}
+                                onChange={e => onUpdate({ labelAlign: e.target.value as 'left' | 'center' | 'right' })}
+                                className="w-full h-7.5 border border-black/12 rounded-md px-2.5 py-1.5 text-sm outline-none focus:border-violet-400"
+                            >
+                                <option value="left">Left</option>
+                                <option value="center">Center</option>
+                                <option value="right">Right</option>
+                            </select>
+                        </label>
+                    </div>
                 </div>
             }
         </div>
@@ -216,17 +167,14 @@ const EntryPreviewCell = ({
     compact,
 }: {
     entry: FieldGridEntry;
-    tokens: { fieldId: string; fieldLabel: string; fieldType: string }[];
+    tokens: { fieldId: string; fieldLabel: string; fieldType: string; suffix?: string | null }[];
     layout: string;
     labelWidth: number;
     valueStyle: string;
     compact: boolean;
 }): ReactElement => {
     const field = entry.fieldId ? tokens.find(t => t.fieldId === entry.fieldId) : undefined;
-
-    if (entry.type === 'spacer') {
-        return <div className="min-h-4" />;
-    }
+    const numberSuffix = field?.fieldType === 'NUMBER' && field?.suffix ? field.suffix : null;
 
     const label = entry.type === 'custom'
         ? entry.customLabel ?? ''
@@ -243,29 +191,17 @@ const EntryPreviewCell = ({
             ? 'border border-black/15 rounded px-1'
             : '';
 
-    if (entry.type === 'checkbox') {
-        return (
-            <div className={`flex items-center gap-1.5 ${compact ? 'py-0.5' : 'py-1'}`}>
-                <span className="inline-block w-3.5 h-3.5 border border-black/30 rounded-sm shrink-0" />
-                <span className="text-xs text-black/60" style={labelStyle}>{label}</span>
-            </div>
-        );
-    }
-
-    if (entry.type === 'radio') {
-        return (
-            <div className={`flex items-center gap-1.5 ${compact ? 'py-0.5' : 'py-1'}`}>
-                <span className="inline-block w-3.5 h-3.5 border border-black/30 rounded-full shrink-0" />
-                <span className="text-xs text-black/60" style={labelStyle}>{label}</span>
-            </div>
-        );
-    }
+    const fieldValue = entry.type === 'custom'
+        ? (entry.customValue || '—')
+        : numberSuffix
+            ? <span className="inline-flex items-baseline gap-1">________________<span className="text-black/30 text-[10px]">{numberSuffix}</span></span>
+            : '________________';
 
     if (layout === 'value-only') {
         return (
             <div className={compact ? 'py-0.5' : 'py-1'}>
                 <span className={`text-xs text-black/40 inline-block min-w-12 ${valueDecoration}`}>
-                    { entry.type === 'custom' ? (entry.customValue || '—') : '________________' }
+                    {fieldValue}
                 </span>
             </div>
         );
@@ -276,7 +212,7 @@ const EntryPreviewCell = ({
             <div className={compact ? 'py-0.5' : 'py-1'}>
                 <div className="text-[10px] text-black/50 mb-0.5" style={labelStyle}>{label}</div>
                 <div className={`text-xs text-black/40 ${valueDecoration}`}>
-                    { entry.type === 'custom' ? (entry.customValue || '—') : '________________' }
+                    {fieldValue}
                 </div>
             </div>
         );
@@ -289,7 +225,7 @@ const EntryPreviewCell = ({
                 {label}:
             </span>
             <span className={`text-xs text-black/40 flex-1 ${valueDecoration}`}>
-                { entry.type === 'custom' ? (entry.customValue || '—') : '________________' }
+                {fieldValue}
             </span>
         </div>
     );
@@ -394,7 +330,7 @@ const FieldGridBlock = ({ block }: FieldGridBlockProps): ReactElement => {
                     style={{ border: showBorders ? `1px solid ${borderColor}` : 'none' }}
                 >
                     <div className="grid" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
-                        { gridCells.flatMap((row, ri) =>
+                        { gridCells.flatMap((row) =>
                             row.map((cell, ci) => {
                                 if (!cell) return null;
                                 // Skip placeholder cells for colspan

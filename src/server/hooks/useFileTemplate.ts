@@ -18,7 +18,12 @@ import {
     CREATE_FORM_INSTANCE,
     SAVE_FORM_INSTANCE,
     SUBMIT_FORM_INSTANCE,
-    REMOVE_FORM_INSTANCE
+    REMOVE_FORM_INSTANCE,
+    RENAME_FORM_INSTANCE,
+    GET_TEMPLATE_MAPPINGS_FOR_TARGET_VERSION,
+    GET_TEMPLATE_MAPPINGS_FOR_SOURCE_VERSION,
+    CREATE_TEMPLATE_FIELD_MAPPING,
+    DELETE_TEMPLATE_FIELD_MAPPING
 } from "../api/template/file-template"
 import {
     useLazyQueryWithToast,
@@ -43,6 +48,33 @@ interface CreateFormInstanceInput {
     templateId: number;
     stepInstanceId: number;
     fieldValues?: FormFieldValueInput[];
+}
+
+export interface TemplateFieldMapping {
+    id: string;
+    sourceVersionId: number;
+    sourceFieldStableId: string;
+    targetVersionId: number;
+    targetFieldStableId: string;
+    sourceVersion?: {
+        id: string;
+        versionNumber: number;
+        template?: { id: string; title: string };
+        sections?: Array<{ id: string; fields: Array<{ id: string; stableId: string; label: string; type: string }> }>;
+    };
+    targetVersion?: {
+        id: string;
+        versionNumber: number;
+        template?: { id: string; title: string };
+        sections?: Array<{ id: string; fields: Array<{ id: string; stableId: string; label: string; type: string }> }>;
+    };
+}
+
+interface CreateTemplateFieldMappingInput {
+    sourceVersionId: number;
+    sourceFieldStableId: string;
+    targetVersionId: number;
+    targetFieldStableId: string;
 }
 
 interface useFileTemplateResponse {
@@ -73,6 +105,13 @@ interface useFileTemplateResponse {
     updateFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => FetchResult<{ data: ApiResponse<number> }>;
     publishFormInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse<number> }>;
     removeFormInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse<number> }>;
+    renameFormInstance: (variables: { id: number; input: { displayName: string | null } }) => FetchResult<{ data: ApiResponse<number> }>;
+
+    templateMappingsForTarget: TemplateFieldMapping[];
+    getTemplateMappingsForTargetVersion: (variables: { targetVersionId: number }) => Promise<FetchResult<{ data: TemplateFieldMapping[] }>>;
+    getTemplateMappingsForSourceVersion: (variables: { sourceVersionId: number }) => Promise<FetchResult<{ data: TemplateFieldMapping[] }>>;
+    createTemplateFieldMapping: (variables: { input: CreateTemplateFieldMappingInput }) => Promise<FetchResult<{ data: TemplateFieldMapping }>>;
+    deleteTemplateFieldMapping: (variables: { id: number }) => Promise<FetchResult<{ data: ApiResponse<number> }>>;
 }
 
 export const useFileTemplate = (): useFileTemplateResponse => {
@@ -113,6 +152,15 @@ export const useFileTemplate = (): useFileTemplateResponse => {
     const [ publishFormInstance ] = useMutationWithToast(SUBMIT_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
     /** Remove a form instance */
     const [ removeFormInstance ] = useMutationWithToast(REMOVE_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    /** Rename a form instance (set or clear displayName) */
+    const [ renameFormInstance ] = useMutationWithToast(RENAME_FORM_INSTANCE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+
+    /** Field mapping queries */
+    const [ getTemplateMappingsForTargetVersion, { data: mappingsForTargetData } ] = useLazyQueryWithToast(GET_TEMPLATE_MAPPINGS_FOR_TARGET_VERSION, { fetchPolicy: 'network-only' });
+    const [ getTemplateMappingsForSourceVersion ] = useLazyQueryWithToast(GET_TEMPLATE_MAPPINGS_FOR_SOURCE_VERSION, { fetchPolicy: 'network-only' });
+    /** Field mapping mutations */
+    const [ createTemplateFieldMapping ] = useMutationWithToast(CREATE_TEMPLATE_FIELD_MAPPING);
+    const [ deleteTemplateFieldMapping ] = useMutationWithToast(DELETE_TEMPLATE_FIELD_MAPPING);
 
     return {
         fileTemplates: fileTemplatesData?.data ?? [],
@@ -141,6 +189,13 @@ export const useFileTemplate = (): useFileTemplateResponse => {
         createFormInstance: (variables: { input: CreateFormInstanceInput }) => createFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
         updateFormInstance: (variables: { id: number; input: { fieldValues: FormFieldValueInput[] } }) => updateFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
         publishFormInstance: (variables: { id: number }) => publishFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
-        removeFormInstance: (variables: { id: number }) => removeFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>
+        removeFormInstance: (variables: { id: number }) => removeFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
+        renameFormInstance: (variables: { id: number; input: { displayName: string | null } }) => renameFormInstance({ variables }) as FetchResult<{ data: ApiResponse<number> }>,
+
+        templateMappingsForTarget: mappingsForTargetData?.data ?? [],
+        getTemplateMappingsForTargetVersion: (variables: { targetVersionId: number }) => getTemplateMappingsForTargetVersion({ variables }) as Promise<FetchResult<{ data: TemplateFieldMapping[] }>>,
+        getTemplateMappingsForSourceVersion: (variables: { sourceVersionId: number }) => getTemplateMappingsForSourceVersion({ variables }) as Promise<FetchResult<{ data: TemplateFieldMapping[] }>>,
+        createTemplateFieldMapping: (variables: { input: CreateTemplateFieldMappingInput }) => createTemplateFieldMapping({ variables }) as Promise<FetchResult<{ data: TemplateFieldMapping }>>,
+        deleteTemplateFieldMapping: (variables: { id: number }) => deleteTemplateFieldMapping({ variables }) as Promise<FetchResult<{ data: ApiResponse<number> }>>,
     }
 }

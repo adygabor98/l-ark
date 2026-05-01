@@ -10,7 +10,8 @@ import Suggestion, {
     type SuggestionKeyDownProps
 } from '@tiptap/suggestion';
 import {
-    PluginKey
+    PluginKey,
+    NodeSelection
 } from '@tiptap/pm/state';
 import FieldTokenNodeView from '../nodes/field-token.node';
 import type {
@@ -43,7 +44,11 @@ export const FieldTokenNode = Node.create({
             fallbackText: { default: '—' },
             dateFormat: { default: null },
             numberFormat: { default: null },
-            options: { default: null }
+            options: { default: null },
+            suffix: { default: null },
+            bold:      { default: false },
+            italic:    { default: false },
+            underline: { default: false },
         };
     },
 
@@ -58,14 +63,38 @@ export const FieldTokenNode = Node.create({
     addNodeView() {
         return ReactNodeViewRenderer(FieldTokenNodeView);
     },
+
+    addKeyboardShortcuts() {
+        const toggle = (attr: 'bold' | 'italic' | 'underline') => (): boolean => {
+            const { selection } = this.editor.state;
+            if (!(selection instanceof NodeSelection)) return false;
+            if (selection.node.type !== this.type) return false;
+            return this.editor.commands.updateAttributes(
+                this.name,
+                { [attr]: !selection.node.attrs[attr] }
+            );
+        };
+        return {
+            'Mod-b': toggle('bold'),
+            'Mod-i': toggle('italic'),
+            'Mod-u': toggle('underline'),
+        };
+    },
 });
 
 const buildPreviewFieldTokenExtension = () => {
     return FieldTokenNode.extend({
         renderHTML({ node }) {
-            const { fieldType, fieldLabel } = node.attrs as FieldTokenAttrs;
+            const { fieldType, fieldLabel, suffix, bold, italic, underline } = node.attrs as FieldTokenAttrs;
             const intent = getRenderIntent();
             const isExport = intent === 'export';
+
+            const fmtStyle = [
+                bold      ? 'font-weight: bold'          : null,
+                italic    ? 'font-style: italic'         : null,
+                underline ? 'text-decoration: underline' : null,
+            ].filter(Boolean).join('; ');
+            const withFmt = (base: string) => fmtStyle ? `${base}; ${fmtStyle}` : base;
 
             // Design-mode hint (faded, smaller) vs export-mode blank underline.
             const DATE_PLACEHOLDER = 'DD/MM/AAAA';
@@ -94,7 +123,7 @@ const buildPreviewFieldTokenExtension = () => {
             if (fieldType === 'ADDRESS') {
                 return [
                     'span',
-                    { 'data-field-preview': 'ADDRESS', style: ' display: inline-flex; flex-direction: column; gap: 4px;' },
+                    { 'data-field-preview': 'ADDRESS', style: withFmt('display: inline-flex; flex-direction: column; gap: 4px;') },
                     [ 'span', { style: `${blankStyle}; min-width: 120px;` }, blankFill.repeat(2) ]
                 ];
             }
@@ -104,7 +133,7 @@ const buildPreviewFieldTokenExtension = () => {
                 // affordance that leaked into exports and confused paper use.
                 return [
                     'span',
-                    { 'data-field-preview': 'BOOLEAN', style: checkboxGroupStyle },
+                    { 'data-field-preview': 'BOOLEAN', style: withFmt(checkboxGroupStyle) },
                     checkboxItem('Sí'),
                     checkboxItem('No'),
                 ];
@@ -113,7 +142,7 @@ const buildPreviewFieldTokenExtension = () => {
             if (fieldType === 'FILE') {
                 return [
                     'span',
-                    { 'data-field-preview': 'FILE', style: 'display:inline-flex; align-items:center; gap:4px; flex: 1 1 auto; min-width: 80px; margin: 0 10px;' },
+                    { 'data-field-preview': 'FILE', style: withFmt('display:inline-flex; align-items:center; gap:4px; flex: 1 1 auto; min-width: 80px; margin: 0 10px;') },
                     ['span', { style: 'font-size:12px;flex-shrink:0;' }, '📎'],
                     ['span', { style: 'flex: 1 1 auto; min-width: 60px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35);' }, ''],
                 ];
@@ -126,7 +155,7 @@ const buildPreviewFieldTokenExtension = () => {
                 // filling the form, not the glyph — so one style for both.
                 return [
                     'span',
-                    { 'data-field-preview': fieldType, style: checkboxGroupStyle },
+                    { 'data-field-preview': fieldType, style: withFmt(checkboxGroupStyle) },
                     ...options.map((opt: { label: string }) => checkboxItem(opt.label)),
                 ];
             }
@@ -137,7 +166,7 @@ const buildPreviewFieldTokenExtension = () => {
                     'span',
                     {
                         'data-field-preview': fieldType,
-                        style: 'display: block; margin-top: 4px; margin-bottom: 4px; color:#888; letter-spacing: 0.5px; line-height: 2.2;',
+                        style: withFmt('display: block; margin-top: 4px; margin-bottom: 4px; color:#888; letter-spacing: 0.5px; line-height: 2.2;'),
                     },
                     line,
                 ];
@@ -152,7 +181,7 @@ const buildPreviewFieldTokenExtension = () => {
                         'span',
                         {
                             'data-field-preview': fieldType,
-                            style: 'display: inline-block; flex: 1 1 auto; min-width: 80px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;',
+                            style: withFmt('display: inline-block; flex: 1 1 auto; min-width: 80px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;'),
                         },
                         '',
                     ];
@@ -163,8 +192,31 @@ const buildPreviewFieldTokenExtension = () => {
                     'color: rgba(0,0,0,0.3); font-size: 0.85em; font-family: Lato-Regular; letter-spacing: 0.02em; margin: 0 6px; vertical-align: baseline;';
                 return [
                     'span',
-                    { 'data-field-preview': fieldType, style: hintStyle },
+                    { 'data-field-preview': fieldType, style: withFmt(hintStyle) },
                     fieldType === 'DATE' ? DATE_PLACEHOLDER : DATETIME_PLACEHOLDER,
+                ];
+            }
+
+            // NUMBER with suffix: render underline + suffix label side by side.
+            if (fieldType === 'NUMBER' && suffix) {
+                return [
+                    'span',
+                    {
+                        'data-field-preview': 'NUMBER',
+                        'data-field-label': fieldLabel ?? '',
+                        title: fieldLabel ?? '',
+                        style: withFmt('display: inline-flex; flex: 1 1 auto; align-items: baseline; min-width: 60px; margin: 0 10px; gap: 3px;'),
+                    },
+                    [
+                        'span',
+                        { style: 'flex: 1; display: inline-block; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom;' },
+                        '',
+                    ],
+                    [
+                        'span',
+                        { style: 'color: rgba(0,0,0,0.5); font-size: 0.85em; font-family: Lato-Regular; white-space: nowrap;' },
+                        suffix,
+                    ],
                 ];
             }
 
@@ -178,7 +230,7 @@ const buildPreviewFieldTokenExtension = () => {
                     'data-field-preview': 'TEXT',
                     'data-field-label': fieldLabel ?? '',
                     title: fieldLabel ?? '',
-                    style: 'display: inline-block; flex: 1 1 auto; min-width: 60px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;',
+                    style: withFmt('display: inline-block; flex: 1 1 auto; min-width: 60px; height: 1.1em; border-bottom: 1px dotted rgba(0,0,0,0.35); vertical-align: bottom; margin: 0 10px;'),
                 },
                 '',
             ];
@@ -293,6 +345,7 @@ export function buildFieldTokenSuggestionExtension(getTokens: () => AvailableTok
                                     fieldType: props.fieldType,
                                     fallbackText: '—',
                                     options: hasOptions ? JSON.stringify(props.options) : null,
+                                    suffix: props.suffix ?? null,
                                 },
                             })
                             .insertContent(' ')

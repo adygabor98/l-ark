@@ -126,8 +126,13 @@ const SelectInput = (props: PropTypes) => {
         }
     }, [type, params]);
     
+    /** When in single-mode, allow the selected label to wrap and the selector to grow vertically. */
+    const wrapClasses = !multiple
+        ? '[&_.ant-select-selector]:!h-auto [&_.ant-select-selector]:!min-h-10 [&_.ant-select-selector]:!py-1.5 [&_.ant-select-selection-item]:!whitespace-normal [&_.ant-select-selection-item]:!break-words [&_.ant-select-selection-item]:!leading-snug [&_.ant-select-selection-item]:!h-auto'
+        : '';
+
     return (
-        <div className={`w-full gap-5 items-center`}>
+        <div className={`w-full gap-5 items-center ${wrapClasses}`}>
             <Select
                 {...field}
                 value={multiple
@@ -146,7 +151,7 @@ const SelectInput = (props: PropTypes) => {
                         {tagProps.label}
                     </span>
                 )}
-                getPopupContainer={(trigger) => trigger.parentElement || document.body}
+                getPopupContainer={() => document.body}
                 onChange={(value) => {
                     field.onChange(value);
                     if (onSelectChange) {

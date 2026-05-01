@@ -428,7 +428,13 @@ const TemplateDocumentPreview = (props: PropTypes): ReactElement | null => {
                                                         <textarea readOnly placeholder={field.placeholder} className="min-h-50 w-full bg-transparent border-b border-black/15 text-[11px] px-1 pt-1 outline-none resize-none" />
                                                     }
                                                     { field.type === TemplateComponents.NUMBER &&
-                                                        <input readOnly type="number" placeholder={field.placeholder} className="h-7 w-full bg-transparent border-b border-black/15 text-[11px] px-1 outline-none" />
+                                                        (field.suffix
+                                                            ? <div className="flex items-center h-7 border-b border-black/15">
+                                                                <input readOnly placeholder={field.placeholder || '0.00'} className="h-full flex-1 bg-transparent text-[11px] px-1 outline-none" />
+                                                                <span className="text-[11px] text-black/40 font-[Lato-Bold] pr-1 pl-1">{field.suffix}</span>
+                                                              </div>
+                                                            : <input readOnly type="number" placeholder={field.placeholder} className="h-7 w-full bg-transparent border-b border-black/15 text-[11px] px-1 outline-none" />
+                                                        )
                                                     }
                                                     { field.type === TemplateComponents.CURRENCY &&
                                                         <div className="flex items-center h-7 border-b border-black/15">

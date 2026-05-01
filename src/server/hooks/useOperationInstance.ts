@@ -15,7 +15,8 @@ import {
     UPDATE_PAYMENT_STATUS,
     REMOVE_INSTANCE,
     EXECUTE_OPEN_OPERATION_STEP,
-    SELECT_DOCUMENTS_TO_SHARE
+    SELECT_DOCUMENTS_TO_SHARE,
+    MANAGE_SHARED_DOCUMENTS
 } from "../api/operation/operation-instance.mutations";
 import {
     useLazyQueryWithToast,
@@ -43,13 +44,14 @@ interface UseOperationInstanceApiResponse {
     closeOperation: (variables: { input: { instanceId: string; paymentStatus: string } }) => FetchResult<{ data: ApiResponse }>;
     updatePaymentStatus: (variables: { instanceId: string; status: string }) => FetchResult<{ data: ApiResponse }>;
     
-    linkInstances: (variables: { input: LinkOperationInstancesInput }) => FetchResult<{ data: ApiResponse }>;
+    linkInstances: (variables: { input: LinkOperationInstancesInput & { title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => FetchResult<{ data: ApiResponse }>;
     unlinkInstances: (variables: { input: { sourceInstanceId: number; targetInstanceId: number } }) => FetchResult<{ data: ApiResponse }>;
 
     deleteInstance: (variables: { id: number }) => FetchResult<{ data: ApiResponse }>;
-    
-    executeOpenOperationStep: (variables: { input: { stepInstanceId: number } }) => FetchResult<{ data: ApiResponse }>;
+
+    executeOpenOperationStep: (variables: { input: { stepInstanceId: number; selectedBlueprintId?: number; title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => FetchResult<{ data: ApiResponse & { entityId?: string | number } }>;
     selectDocumentsToShare: (variables: { input: { instanceId: string; targetInstanceId: string; documentIds: string[] } }) => FetchResult<{ data: ApiResponse }>;
+    manageSharedDocuments: (variables: { input: { instanceLinkId: string | number; addFormInstanceIds?: (string | number)[]; addDocumentIds?: (string | number)[]; revokeIds?: (string | number)[] } }) => FetchResult<{ data: ApiResponse }>;
 }
 
 export const useOperationInstance = (): UseOperationInstanceApiResponse => {
@@ -83,6 +85,8 @@ export const useOperationInstance = (): UseOperationInstanceApiResponse => {
     const [executeOpenOperationStep] = useMutationWithToast(EXECUTE_OPEN_OPERATION_STEP, { refetchQueries: ['gqlRetrieveInstanceById'] });
     /** Select documents to share on closure */
     const [selectDocumentsToShare] = useMutationWithToast(SELECT_DOCUMENTS_TO_SHARE, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    /** Manage (add / revoke) shared documents on an existing InstanceLink */
+    const [manageSharedDocuments] = useMutationWithToast(MANAGE_SHARED_DOCUMENTS, { refetchQueries: ['gqlRetrieveInstanceById'] });
 
     return {
         instances: instancesData?.data ?? [],
@@ -99,12 +103,13 @@ export const useOperationInstance = (): UseOperationInstanceApiResponse => {
         closeOperation: (variables: { input: { instanceId: string; paymentStatus: string } }) => closeOperation({ variables }) as FetchResult<{ data: ApiResponse }>,
         updatePaymentStatus: (variables: { instanceId: string; status: string }) => updatePaymentStatus({ variables }) as FetchResult<{ data: ApiResponse }>,
 
-        linkInstances: (variables: { input: LinkOperationInstancesInput }) => linkInstances({ variables }) as FetchResult<{ data: ApiResponse }>,
+        linkInstances: (variables: { input: LinkOperationInstancesInput & { title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => linkInstances({ variables }) as FetchResult<{ data: ApiResponse }>,
         unlinkInstances: (variables: { input: { sourceInstanceId: number; targetInstanceId: number } }) => unlinkInstances({ variables }) as FetchResult<{ data: ApiResponse }>,
-        
+
         deleteInstance: (variables: { id: number }) => deleteInstance({ variables }) as FetchResult<{ data: ApiResponse }>,
-        
-        executeOpenOperationStep: (variables: { input: { stepInstanceId: number } }) => executeOpenOperationStep({ variables }) as FetchResult<{ data: ApiResponse }>,
+
+        executeOpenOperationStep: (variables: { input: { stepInstanceId: number; selectedBlueprintId?: number; title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => executeOpenOperationStep({ variables }) as FetchResult<{ data: ApiResponse & { entityId?: string | number } }>,
         selectDocumentsToShare: (variables: { input: { instanceId: string; targetInstanceId: string; documentIds: string[] } }) => selectDocumentsToShare({ variables }) as FetchResult<{ data: ApiResponse }>,
+        manageSharedDocuments: (variables: { input: { instanceLinkId: string | number; addFormInstanceIds?: (string | number)[]; addDocumentIds?: (string | number)[]; revokeIds?: (string | number)[] } }) => manageSharedDocuments({ variables }) as FetchResult<{ data: ApiResponse }>,
     };
 };

@@ -8,6 +8,7 @@ import {
     Save,
     Trash2Icon
 } from 'lucide-react';
+import type { OperationBlueprintVersionInfo } from '@l-ark/types';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -21,6 +22,7 @@ import Button from '../../../shared/components/button';
 
 interface PropTypes {
     operationId: number;
+    latestVersion?: OperationBlueprintVersionInfo | null;
     title: string;
     description: string
     onBack: () => void;
@@ -31,7 +33,7 @@ interface PropTypes {
 
 const OperationBlueprintHeader = (props: PropTypes): ReactElement => {
     /** Retrieve component properties */
-    const { title, description, operationId, onBack, handleSaveDraft, onPublish, onDelete } = props;
+    const { title, description, operationId, latestVersion, onBack, handleSaveDraft, onPublish, onDelete } = props;
     /** Toast utilities */
     const { onConfirmationToast } = useToast();
 
@@ -57,6 +59,11 @@ const OperationBlueprintHeader = (props: PropTypes): ReactElement => {
                 <div className="flex flex-col gap-1">
                     <div className="flex items-center gap-3">
                         <span className="text-md font-[Lato-Bold]"> { title } </span>
+                        { latestVersion &&
+                            <span className={`text-[10px] font-[Lato-Bold] uppercase tracking-wide px-2 py-0.5 rounded-full ${ latestVersion.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : latestVersion.status === 'DEPRECATED' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700' }`}>
+                                v{ latestVersion.versionNumber } &middot; { latestVersion.status }
+                            </span>
+                        }
                     </div>
                     <span className="text-xs font-[Lato-Light] line-clamp-1 max-w-50"> { description } </span>
                 </div>

@@ -11,6 +11,7 @@ import {
     ChevronLeft,
     Eye,
     Layout,
+    Link2,
     Trash2Icon,
     Loader2,
     Check,
@@ -227,12 +228,16 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
             requiredDocuments: [],
             format: 'HTML',
             width: 'FULL',
-            multiple: false
+            multiple: false,
+            suffix: null
         };
 
         const currentFields = getValues(`sections.${activeSectionIndex}.fields`) || [];
         setValue(`sections.${activeSectionIndex}.fields`, [...currentFields, newField]);
         setSelectedFieldId(newField.id);
+        setTimeout(() => {
+            document.getElementById(`field-${newField.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50);
     };
 
     /** Manage to delete an existing field of the active sections */
@@ -342,6 +347,31 @@ const TemplateBuilder = (props: PropTypes): ReactElement => {
                                             : <Layout className="w-4 h-4" />
                                         }
                                         Export Layout
+                                    </DropdownMenuItem>
+                                }
+                                { id && templateVersionId &&
+                                    <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2" disabled={isNavSaving} onClick={async () => {
+                                        if (isDirty && onAutoSaveImmediate) {
+                                            setIsNavSaving(true);
+                                            onToast({ message: 'Saving changes before opening Field Mappings...', type: 'info' });
+                                            try {
+                                                await onAutoSaveImmediate();
+                                                markDirty(false);
+                                                navigate(`/templates/field-mappings/${id}/${templateVersionId}`);
+                                            } catch {
+                                                onToast({ message: 'Failed to save changes. Please try again.', type: 'error' });
+                                            } finally {
+                                                setIsNavSaving(false);
+                                            }
+                                        } else {
+                                            navigate(`/templates/field-mappings/${id}/${templateVersionId}`);
+                                        }
+                                    }}>
+                                        { isNavSaving
+                                            ? <Loader2 className="w-4 h-4 animate-spin" />
+                                            : <Link2 className="w-4 h-4" />
+                                        }
+                                        Field Mappings
                                     </DropdownMenuItem>
                                 }
                             </DropdownMenuContent>

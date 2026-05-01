@@ -47,7 +47,7 @@ const FontSizeTextStyle = TextStyle.extend({
 });
 
 export interface ExportEditorHandle {
-    insertToken: (fieldId: string, fieldLabel: string, fieldType: string, options?: string) => void;
+    insertToken: (fieldId: string, fieldLabel: string, fieldType: string, options?: string, suffix?: string | null) => void;
     getContent: () => Record<string, unknown>;
     setContent: (content: Record<string, unknown>) => void;
 }
@@ -95,13 +95,13 @@ export const ExportEditor = forwardRef<ExportEditorHandle, ExportEditorProps>(
         });
 
         useImperativeHandle(ref, () => ({
-            insertToken(fieldId, fieldLabel, fieldType, options) {
+            insertToken(fieldId, fieldLabel, fieldType, options, suffix) {
                 editor
                     ?.chain()
                     .focus()
                     .insertContent({
                         type: 'fieldToken',
-                        attrs: { fieldId, fieldLabel, fieldType, fallbackText: '—', options: options ?? null },
+                        attrs: { fieldId, fieldLabel, fieldType, fallbackText: '—', options: options ?? null, suffix: suffix ?? null },
                     })
                     .insertContent(' ')
                     .run();

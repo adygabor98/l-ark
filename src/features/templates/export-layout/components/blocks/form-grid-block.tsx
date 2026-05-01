@@ -11,9 +11,7 @@ import {
     AtSign,
     CheckSquare,
     Columns,
-    Rows,
-    Merge,
-    Split
+    Rows
 } from 'lucide-react';
 import {
     v4 as uuidv4
@@ -43,16 +41,11 @@ const makeCell = (overrides?: Partial<FormGridCell>): FormGridCell => ({
 const CONTENT_TYPES: { value: FormGridCellContent; label: string; Icon: typeof Type }[] = [
     { value: 'label', label: 'Label', Icon: Type },
     { value: 'field', label: 'Field', Icon: AtSign },
-    { value: 'checkbox', label: 'Checkbox', Icon: CheckSquare },
     { value: 'empty', label: 'Empty', Icon: GripVertical },
 ];
 
 /** Inline cell editor — shown when a cell is selected */
-const CellEditor = ({
-    cell,
-    tokens,
-    onUpdate,
-}: {
+const CellEditor = ({ cell, tokens, onUpdate }: {
     cell: FormGridCell;
     tokens: { fieldId: string; fieldLabel: string; fieldType: string; sectionTitle: string }[];
     onUpdate: (patch: Partial<FormGridCell>) => void;
@@ -66,7 +59,7 @@ const CellEditor = ({
                 { CONTENT_TYPES.map(({ value, label, Icon }) => (
                     <button key={value}
                         onClick={() => onUpdate({ contentType: value })}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+                        className={`flex h-7.5 text-md items-center gap-1 px-2 py-1 rounded-md transition-colors ${
                             cell.contentType === value
                                 ? 'bg-amber-100 text-amber-700 font-medium'
                                 : 'text-black/50 hover:bg-black/4'
@@ -84,35 +77,29 @@ const CellEditor = ({
                     value={cell.label ?? ''}
                     onChange={e => onUpdate({ label: e.target.value })}
                     placeholder="Enter label text…"
-                    className="border border-black/10 rounded-md px-2 py-1 text-xs outline-none focus:border-amber-400"
+                    className="h-10 border border-black/10 rounded-md px-2 py-1 text-xs outline-none focus:border-amber-400"
                     autoFocus
                 />
             }
 
             {/* Field selector */}
-            { (cell.contentType === 'field' || cell.contentType === 'checkbox') &&
+            { cell.contentType === 'field' &&
                 <select
                     value={cell.fieldId ?? ''}
                     onChange={e => onUpdate({ fieldId: e.target.value || undefined })}
-                    className="border border-black/10 rounded-md px-2 py-1 text-xs outline-none focus:border-amber-400"
+                    className="h-10 border border-black/10 rounded-md px-2 py-1 text-xs outline-none focus:border-amber-400"
                 >
-                    <option value="">— Select field —</option>
-                    { tokens
-                        .filter(t => cell.contentType === 'checkbox'
-                            ? ['BOOLEAN', 'CHECKBOX'].includes(t.fieldType)
-                            : true
-                        )
-                        .map(t => (
-                            <option key={t.fieldId} value={t.fieldId}>
-                                {t.fieldLabel} ({t.sectionTitle})
-                            </option>
-                        ))
-                    }
+                    <option value=""> Select a form field </option>
+                    { tokens.map(t => (
+                        <option key={t.fieldId} value={t.fieldId}>
+                            {t.fieldLabel} ({t.sectionTitle})
+                        </option>
+                    )) }
                 </select>
             }
 
             {/* Styling row */}
-            <div className="flex items-center gap-2 border-t border-black/6 pt-2">
+            <div className="w-full flex items-center gap-10 border-t border-black/6 pt-2">
                 <label className="flex items-center gap-1">
                     <input
                         type="checkbox"
@@ -120,35 +107,27 @@ const CellEditor = ({
                         onChange={e => onUpdate({ fontWeight: e.target.checked ? 'bold' : 'normal' })}
                         className="accent-amber-500"
                     />
-                    <span className="font-bold">B</span>
+                    <span className="font-bold text-lg"> Bold </span>
                 </label>
 
                 <select
                     value={cell.textAlign ?? 'left'}
                     onChange={e => onUpdate({ textAlign: e.target.value as 'left' | 'center' | 'right' })}
-                    className="border border-black/10 rounded px-1 py-0.5 text-[10px]"
+                    className="h-7.5 border border-black/10 rounded px-1 py-0.5 text-[10px]"
                 >
                     <option value="left">Left</option>
                     <option value="center">Center</option>
                     <option value="right">Right</option>
                 </select>
 
-                <input
-                    type="color"
-                    value={cell.backgroundColor ?? '#ffffff'}
-                    onChange={e => onUpdate({ backgroundColor: e.target.value === '#ffffff' ? undefined : e.target.value })}
-                    className="w-5 h-5 border border-black/10 rounded cursor-pointer"
-                    title="Background color"
-                />
-
-                <label className="flex items-center gap-1 ml-auto">
+                <label className="flex items-center gap-1">
                     <input
                         type="checkbox"
                         checked={cell.verticalText ?? false}
                         onChange={e => onUpdate({ verticalText: e.target.checked })}
                         className="accent-amber-500"
                     />
-                    <span className="text-[10px] text-black/50">Vertical</span>
+                    <span className="text-lg text-black/50">Vertical</span>
                 </label>
             </div>
 
@@ -162,7 +141,7 @@ const CellEditor = ({
                         max={12}
                         value={cell.colspan ?? 1}
                         onChange={e => onUpdate({ colspan: Math.max(1, Math.min(12, parseInt(e.target.value) || 1)) })}
-                        className="w-10 border border-black/10 rounded px-1 py-0.5 text-center"
+                        className="h-10 w-20 border border-black/10 rounded px-1 py-0.5 text-center"
                     />
                 </label>
                 <label className="flex items-center gap-1 text-[10px] text-black/50">
@@ -173,7 +152,7 @@ const CellEditor = ({
                         max={20}
                         value={cell.rowspan ?? 1}
                         onChange={e => onUpdate({ rowspan: Math.max(1, Math.min(20, parseInt(e.target.value) || 1)) })}
-                        className="w-10 border border-black/10 rounded px-1 py-0.5 text-center"
+                        className="h-10 w-20 border border-black/10 rounded px-1 py-0.5 text-center"
                     />
                 </label>
             </div>

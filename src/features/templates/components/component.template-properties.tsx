@@ -167,6 +167,11 @@ const ComponentTemplateProperties = (props: PropTypes): ReactElement => {
                             <Field control={control} name={`${fieldPath}.placeholder`} label={ 'Field placeholder' } placeholder={'Add any description for this field'} simple type='text' />
                         }
 
+                        {/* Suffix — only for NUMBER */}
+                        { selectedField.type === TemplateComponents.NUMBER &&
+                            <Field control={control} name={`${fieldPath}.suffix`} label={'Suffix'} placeholder={'e.g. kg, m², pcs'} simple type='text' />
+                        }
+
                         {/* Description content — Tiptap rich text editor */}
                         { selectedField.type === TemplateComponents.DESCRIPTION &&
                             <div className="space-y-2">

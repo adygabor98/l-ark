@@ -15,6 +15,8 @@ import {
     useToast
 } from '../../../shared/hooks/useToast';
 import Button from '../../../shared/components/button';
+import { apiClient } from '../../../server/api-client';
+import { getAccessToken } from '../../../shared/helpers/auth';
 
 interface PropTypes {
 	docId: number;
@@ -51,8 +53,7 @@ const MyWorkspaceOTP = (props: PropTypes): ReactElement => {
 		setRequesting(true);
 		setError(null);
 		try {
-			const res = await fetch(`${import.meta.env.VITE_SERVER_HOST}/api/documents/${docId}/request-otp`, { method: 'POST' });
-			const result = await res.json();
+			const result = await apiClient.post(`/api/documents/${docId}/request-otp`, null);
 			if ( result.success ) {
 				setOtpSent(true);
 				setCountdown(OTP_EXPIRY_SECONDS);
@@ -90,9 +91,16 @@ const MyWorkspaceOTP = (props: PropTypes): ReactElement => {
 		setError(null);
 
 		try {
+			// Raw fetch here: this endpoint returns either a decrypted Blob (encrypted
+			// docs) or JSON (legacy unencrypted docs). The apiClient hard-codes a
+			// response type; this site needs to inspect Content-Type at runtime.
+			const token = getAccessToken();
 			const res = await fetch(`${import.meta.env.VITE_SERVER_HOST}/api/documents/${docId}/verify-otp`, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					...(token ? { Authorization: `Bearer ${token}` } : {}),
+				},
 				body: JSON.stringify({ code }),
 			});
 

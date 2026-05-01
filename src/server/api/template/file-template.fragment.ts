@@ -68,6 +68,7 @@ export const FILE_TEMPLATE_DETAIL = gql`
 
                     format
                     multiple
+                    suffix
 
                     options
                     columns
@@ -172,6 +173,7 @@ export const FORM_INSTANCE_DETAIL = gql`
                     width
                     format
                     multiple
+                    suffix
                     options
                     columns
                 }

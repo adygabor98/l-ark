@@ -1,15 +1,34 @@
-import { ArrowRight, Link2, X } from 'lucide-react';
 import {
     useEffect,
     useState,
     type ReactElement
 } from 'react';
-import { useWorkspaceInstanceContext } from '../../context/workspace-instance.context';
-import { LinkType, OperationType, type ApiResponse } from '@l-ark/types';
+import {
+    ArrowRight,
+    Link2,
+    X
+} from 'lucide-react';
+import {
+    useWorkspaceInstanceContext
+} from '../../context/workspace-instance.context';
+import {
+    LinkType,
+    OperationType,
+    type ApiResponse
+} from '@l-ark/types';
+import {
+    useOperationInstance
+} from '../../../../server/hooks/useOperationInstance';
+import type {
+    FetchResult
+} from '@apollo/client';
+import {
+    useToast
+} from '../../../../shared/hooks/useToast';
+import LaunchOperationDialog from '../launch-operation-dialog/launch-operation-dialog';
+import SharedDocumentsPanel from '../shared-documents-panel';
 import Button from '../../../../shared/components/button';
-import { useOperationInstance } from '../../../../server/hooks/useOperationInstance';
-import type { FetchResult } from '@apollo/client';
-import { useToast } from '../../../../shared/hooks/useToast';
+import { getResponseMessage } from '../../../../server/hooks/useApolloWithToast';
 
 const InstanceAllowInstanceLinkStep = (): ReactElement => {
     /** My workspace instance utilities */
@@ -26,6 +45,8 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
 	const [linkingInProgress, setLinkingInProgress] = useState<boolean>(false);
     /** List of all the available other operations */
     const [otherOperationsAvailable, setOtherOperationsAvailable] = useState<any[]>([]);
+    /** Pending target instance for which the user is about to confirm + share docs */
+    const [pendingTarget, setPendingTarget] = useState<{ id: number; title?: string } | null>(null);
 
     if( !instance ) {
         return <></>;
@@ -34,7 +55,6 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
     /** Manage to refresh the available list of the operations */
     const refreshListOfAvailableOperations = (): void => {
         const alreadyLinkedIds = (instance.sourceLinks ?? []).map(link => link.targetInstance.id);
-
         setOtherOperationsAvailable(linkableOtherInstances.filter(linkable => !alreadyLinkedIds.includes(linkable.id) ))
     }
     
@@ -49,17 +69,26 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
         return preReqIds.includes(blueprintId);
     };
 
-    /** Manage to link an other operation to the current one */
-    const onSelectOtherOperation = async (instanceId: number): Promise<void> => {
+    /** Open the share-docs dialog for the picked target instance — actual linking happens on submit. */
+    const onSelectOtherOperation = (target: { id: number; title?: string }): void => {
+        setPendingTarget(target);
+    }
+
+    /** Confirm linking + share documents in one round-trip */
+    const onConfirmLink = async (payload: { sharedFormInstanceIds: number[]; sharedDocumentIds: number[] }): Promise<void> => {
+        if ( !pendingTarget ) return;
         setLinkingInProgress(true);
         try {
             const response: FetchResult<{ data: ApiResponse }> = await linkInstances({ input: {
                 sourceInstanceId: instance.id,
-                targetInstanceIds: [instanceId],
-                linkType: instance.blueprint.type === OperationType.GLOBAL ? LinkType.GLOBAL_OTHER : LinkType.OTHER_OTHER
+                targetInstanceIds: [pendingTarget.id],
+                linkType: instance.blueprint.type === OperationType.GLOBAL ? LinkType.GLOBAL_OTHER : LinkType.OTHER_OTHER,
+                sharedFormInstanceIds: payload.sharedFormInstanceIds,
+                sharedDocumentIds: payload.sharedDocumentIds,
             } });
             await refreshInstance();
-            onToast({ message: response.data?.data.message ?? '', type: response.data?.data.success ? 'success' : 'error' });
+            onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
+            setPendingTarget(null);
             setShowLinkPicker(false);
             setLinkSearch("");
         } finally {
@@ -126,7 +155,7 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
                             .filter(i => !linkSearch || i.title?.toLowerCase().includes(linkSearch.toLowerCase()) || i.code?.toLowerCase().includes(linkSearch.toLowerCase()))
                             .map(inst => (
                                 <button key={inst.id} disabled={linkingInProgress}
-                                    onClick={() => onSelectOtherOperation(inst.id)}
+                                    onClick={() => onSelectOtherOperation({ id: inst.id, title: inst.title })}
                                     className="w-full text-left px-3 py-2 rounded-lg hover:bg-amber-50/60 transition-all cursor-pointer flex items-center gap-2 group disabled:opacity-50"
                                 >
                                     <div className="flex-1 min-w-0">
@@ -144,6 +173,30 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
                         Cancel
                     </Button>
                 </div>
+            }
+
+            {/* Per-link "Documents shared" panels — owner side */}
+            { (instance.sourceLinks ?? []).filter(l => (l as any).sharedDocuments != null).map(l => (
+                <div key={`share-${l.id}`} className="mt-3">
+                    <SharedDocumentsPanel
+                        instanceLinkId={l.id}
+                        sharedDocuments={(l as any).sharedDocuments ?? []}
+                        counterpartTitle={l.targetInstance?.title}
+                        mode="owner"
+                    />
+                </div>
+            ))}
+
+            { pendingTarget &&
+                <LaunchOperationDialog
+                    isOpen={!!pendingTarget}
+                    onClose={() => setPendingTarget(null)}
+                    headerTitle={`Link with ${pendingTarget.title ?? 'operation'}`}
+                    headerSubtitle="Optionally share documents from this operation."
+                    submitLabel="Confirm link"
+                    fixedBlueprint={{ id: pendingTarget.id, title: pendingTarget.title ?? 'Linked operation' }}
+                    onSubmit={onConfirmLink}
+                />
             }
         </div>
     );

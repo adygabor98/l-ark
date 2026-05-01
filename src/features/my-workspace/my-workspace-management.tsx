@@ -34,11 +34,13 @@ import {
     useToast
 } from '../../shared/hooks/useToast';
 import {
+    LinkType,
     OperationType,
     StepInstanceStatus,
     type ApiResponse,
     type OperationInstance
 } from '@l-ark/types';
+import { computeVisibleSteps } from './utils/step-visibility';
 import type {
     FetchResult
 } from '@apollo/client';
@@ -111,9 +113,22 @@ const MyWorkspaceManagement = (): ReactElement => {
 	const handleDelete = async (e: React.MouseEvent, inst: OperationInstance): Promise<void> => {
 		e.stopPropagation();
 
+		const { pct } = getStepProgress(inst);
+		const allCompleted = pct === 100;
+		const hasLinks = (inst.sourceLinks?.length ?? 0) > 0 || (inst.targetLinks?.length ?? 0) > 0;
+
+		if ( hasLinks && allCompleted ) {
+			onToast({ message: 'This operation cannot be deleted because it is linked to other operations. Unlink it first before deleting.', type: 'error' });
+			return;
+		}
+
+		const linkedWarning = hasLinks
+			? ' It is currently linked to other operations — those links will also be removed.'
+			: '';
+
 		const { confirmed } = await onConfirmationToast({
-			title: 'Delete this instance?',
-			description: `"${inst.title}" will be permanently deleted. This action cannot be undone.`,
+			title: 'Permanently delete this operation?',
+			description: `"${inst.title}" and all its data — including uploaded documents and filled forms — will be permanently deleted.${linkedWarning} This action cannot be undone.`,
 			actionText: 'Delete',
 			cancelText: 'Cancel',
 			actionColor: 'error',
@@ -129,9 +144,27 @@ const MyWorkspaceManagement = (): ReactElement => {
 		}
 	};
 
-	/** Manage to get the progress percentage (excludes SKIPPED steps) */
+	/**
+	 * Manage to get the progress percentage.
+	 * Counts only steps the user can actually see (visibility-aware via computeVisibleSteps),
+	 * minus any SKIPPED branches. Falls back to all-steps if blueprint metadata isn't available.
+	 */
 	const getStepProgress = (inst: OperationInstance): { total: number; completed: number; pct: number } => {
-		const relevant = inst.stepInstances.filter((si) => si.status !== StepInstanceStatus.SKIPPED);
+		const blueprintSteps = (inst.blueprint as any)?.steps ?? [];
+		const blueprintEdges = (inst.blueprint as any)?.edges ?? [];
+		const isLaunched = !!(inst as any).launchedFromInstanceId
+			|| (inst.sourceLinks ?? []).some((l: any) => l.linkType === LinkType.GLOBAL_OTHER);
+
+		const visible = blueprintSteps.length > 0
+			? computeVisibleSteps({
+				stepInstances: inst.stepInstances as any,
+				blueprintSteps,
+				edges: blueprintEdges,
+				isLaunched,
+			})
+			: inst.stepInstances;
+
+		const relevant = visible.filter((si) => si.status !== StepInstanceStatus.SKIPPED);
 		const total = relevant.length;
 		const completed = relevant.filter((si) => si.status === StepInstanceStatus.COMPLETED).length;
 		const pct = total > 0 ? Math.round((completed / total) * 100) : 0;

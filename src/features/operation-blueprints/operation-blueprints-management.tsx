@@ -112,6 +112,8 @@ const OperationBlueprintsManagement = (): ReactElement => {
         }
     };
 
+	const getBlueprintSorted = () => [...(blueprints ?? [])].sort((a,b) => a.id - b.id)
+
     return (
         <div className="h-[calc(100%-140px)]">
 			<div className="mt-5 sticky top-0 z-10 pb-2">
@@ -131,7 +133,7 @@ const OperationBlueprintsManagement = (): ReactElement => {
 
             <div className="h-full flex-1 overflow-y-auto relative mt-6">
 				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 pr-2">
-					{ blueprints.map((blueprint: OperationBlueprint) => (
+					{ getBlueprintSorted().map((blueprint: OperationBlueprint) => (
 						<div key={blueprint.id} onClick={() => goToDetail(blueprint.id)}
 							className="group relative rounded-4xl transition-all duration-500 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1.5 flex flex-col cursor-pointer"
 						>
@@ -189,10 +191,17 @@ const OperationBlueprintsManagement = (): ReactElement => {
 									{ blueprint.description || "No description" }
 								</p>
 
-								{/* Step count */}
-								<p className="text-xs text-black/30 font-[Lato-Regular] mb-2">
-									{ blueprint.steps.length } step{ blueprint.steps.length !== 1 ? "s" : "" }
-								</p>
+								{/* Step count + version badge */}
+								<div className="flex items-center gap-2 mb-2">
+									<p className="text-xs text-black/30 font-[Lato-Regular]">
+										{ blueprint.steps.length } step{ blueprint.steps.length !== 1 ? "s" : "" }
+									</p>
+									{ (blueprint as any).latestVersion &&
+										<span className={`text-[10px] font-[Lato-Bold] uppercase tracking-wide px-2 py-0.5 rounded-full ${ (blueprint as any).latestVersion.status === 'PUBLISHED' ? 'bg-emerald-50 text-emerald-700' : (blueprint as any).latestVersion.status === 'DEPRECATED' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700' }`}>
+											v{ (blueprint as any).latestVersion.versionNumber } &middot; { (blueprint as any).latestVersion.status }
+										</span>
+									}
+								</div>
 
 								{/* Footer: status + date */}
 								<div className="mt-auto flex items-center justify-between pt-6 border-t border-black/4">

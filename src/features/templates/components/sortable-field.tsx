@@ -126,7 +126,7 @@ const SortableField = (props: PropTypes): ReactElement => {
                             <InputNumber
                                 placeholder={ placeholder || `0.00` }
                                 className="flex! items-center! text-xs w-full! px-2 bg-black/3! border-none! rounded-md h-11"
-                                suffix={field.type === TemplateComponents.PERCENTAGE ? '%' : field.type === TemplateComponents.CURRENCY ? '€' : ''}
+                                suffix={field.type === TemplateComponents.PERCENTAGE ? '%' : field.type === TemplateComponents.CURRENCY ? '€' : field.type === TemplateComponents.NUMBER ? (field.suffix || '') : ''}
                             />
                         }
 

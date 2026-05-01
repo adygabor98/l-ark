@@ -194,8 +194,7 @@ const TemplateManagement = (): ReactElement => {
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <button
-                                                onClick={e => e.stopPropagation()}
+                                            <button onClick={e => e.stopPropagation()}
                                                 className="flex items-center justify-center h-8 w-8 p-0 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-all duration-300 rounded-full bg-white shadow-sm border border-black/4"
                                             >
                                                 { processingId === template.id
@@ -277,7 +276,7 @@ const TemplateManagement = (): ReactElement => {
                                 </h3>
 
                                 <p className="text-sm text-black/40 font-[Lato-Regular] mb-2 line-clamp-2 leading-relaxed">
-                                    Used for { /*template.operations.join(", ")*/ '' } processes.
+                                   { template.description }
                                 </p>
 
                                 { getDraftVersion(template) &&

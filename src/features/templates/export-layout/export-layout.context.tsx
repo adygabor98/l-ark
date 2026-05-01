@@ -15,7 +15,7 @@ import {
     setRenderIntent as setModuleRenderIntent,
     type RenderIntent,
 } from './utils/render-intent';
-import { stripLayoutIssues } from './utils/layout-reconciliation';
+import { stripLayoutIssues, reconcileLayoutAgainstTokens } from './utils/layout-reconciliation';
 import {
     v4 as uuidv4
 } from 'uuid';
@@ -32,7 +32,6 @@ import type {
     FormGridRow,
     FormGridCell,
     FieldGridEntry,
-    CheckboxGridItem,
 } from './export-layout.models';
 
 // State
@@ -48,7 +47,7 @@ export interface ExportLayoutState {
     pageConfig: ExportPageConfig;
     selectedBlockId: string | null;
     viewMode: 'edit' | 'preview';
-    activeEditorInsertFn: ((fieldId: string, fieldLabel: string, fieldType: string, options?: string) => void) | null;
+    activeEditorInsertFn: ((fieldId: string, fieldLabel: string, fieldType: string, options?: string, suffix?: string | null) => void) | null;
     tokens: AvailableToken[];
     templateId: string;
     templateName?: string;
@@ -158,7 +157,7 @@ type Action =
     | { type: 'SELECT_BLOCK'; payload: { id: string | null } }
     | { type: 'UPDATE_PAGE_CONFIG'; payload: Partial<ExportPageConfig> }
     | { type: 'SET_VIEW_MODE'; payload: 'edit' | 'preview' }
-    | { type: 'SET_ACTIVE_INSERT_FN'; payload: ((fieldId: string, fieldLabel: string, fieldType: string, options?: string) => void) | null }
+    | { type: 'SET_ACTIVE_INSERT_FN'; payload: ((fieldId: string, fieldLabel: string, fieldType: string, options?: string, suffix?: string | null) => void) | null }
     | { type: 'LOAD_LAYOUT'; payload: { rows: ExportRow[]; pageConfig: ExportPageConfig } }
     | { type: 'MOVE_BLOCK'; payload: { fromCellId: string; toCellId: string } }
     | { type: 'MARK_CLEAN' }
@@ -191,29 +190,6 @@ function createDefaultFormGrid(): { rows: FormGridRow[]; columns: number; column
 }
 
 export function createBlock(blockType: BlockType): ExportBlock {
-    if (blockType === 'CHECKBOX_GRID') {
-        const defaultItems: CheckboxGridItem[] = [
-            { id: uuidv4() },
-            { id: uuidv4() },
-            { id: uuidv4() },
-            { id: uuidv4() },
-        ];
-        return {
-            id: uuidv4(),
-            type: 'CHECKBOX_GRID',
-            settings: {
-                checkboxItems: defaultItems,
-                checkboxColumns: 4,
-                checkboxShowBorders: true,
-                checkboxBorderColor: '#e5e7eb',
-                checkboxCompact: false,
-                checkboxStyle: 'checkbox',
-                checkboxShowTitle: false,
-                checkboxTitle: '',
-            },
-        };
-    }
-
     if (blockType === 'FIELD_GRID') {
         const defaultEntries: FieldGridEntry[] = [
             { id: uuidv4(), type: 'field' },
@@ -428,12 +404,18 @@ function coreReducer(state: ExportLayoutState, action: Action): ExportLayoutStat
         case 'SET_ACTIVE_INSERT_FN':
             return { ...state, activeEditorInsertFn: action.payload };
 
-        case 'LOAD_LAYOUT':
+        case 'LOAD_LAYOUT': {
+            const basePageConfig = { ...DEFAULT_PAGE_CONFIG, ...action.payload.pageConfig };
+            // Run client-side reconciliation so tokens deleted from the template
+            // builder (without a version bump) are detected and flagged immediately.
+            const { rows: reconciledRows, pageConfig: reconciledPageConfig } =
+                reconcileLayoutAgainstTokens(action.payload.rows, basePageConfig, state.tokens);
             return {
-                ...withRows(state, action.payload.rows),
-                pageConfig: { ...DEFAULT_PAGE_CONFIG, ...action.payload.pageConfig },
+                ...withRows(state, reconciledRows),
+                pageConfig: reconciledPageConfig,
                 isLoading: false,
             };
+        }
 
         case 'MOVE_BLOCK': {
             const { fromCellId, toCellId } = action.payload;
@@ -556,6 +538,7 @@ export function ExportLayoutProvider({ children, routeState }: ExportLayoutProvi
             sectionId: section.id,
             options: field.options,
             columns: field.columns,
+            suffix: field.suffix,
         }))
     );
 

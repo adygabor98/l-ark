@@ -7,11 +7,14 @@ import {
 } from 'react';
 import {
     CheckCircle2,
+    ChevronDown,
     Circle,
     Download,
     FileText,
+    Link2,
     ListChecks,
     Loader2,
+    Paperclip,
     Pencil,
     Share2,
     Upload,
@@ -41,6 +44,13 @@ import {
 import MyWorkspaceOTP from '../my-workspace-otp';
 import MyWorkspaceGrantAccess from '../my-workspace-grant-access';
 
+import {
+    encodeSharedEntry,
+    findEntryForDoc,
+    parseCheckedEntry,
+    type CheckedDocEntry
+} from '../../utils/checked-documents';
+
 interface PropTypes {
     instanceId: number | null;
     isReadOnly: boolean;
@@ -50,7 +60,7 @@ const InstanceUploadDocumentsStep = (props: PropTypes): ReactElement => {
     /** Retrieve component utilities */
     const { instanceId, isReadOnly } = props;
     /** My workspace utilities (shared via context) */
-    const { selectedBlueprintStep, selectedStepInstance, refreshInstance } = useWorkspaceInstanceContext();
+    const { instance, selectedBlueprintStep, selectedStepInstance, refreshInstance } = useWorkspaceInstanceContext();
     /** Operation instae api utilities */
     const { updateStepInstance } = useOperationInstance();
     /** Document management utilities */
@@ -65,13 +75,17 @@ const InstanceUploadDocumentsStep = (props: PropTypes): ReactElement => {
     const [renamingDocId, setRenamingDocId] = useState<number | null>(null);
     const [renameValue, setRenameValue] = useState('');
     const [renameExt, setRenameExt] = useState('');
+    /** Which expected-document row currently has its "Use shared" picker open */
+    const [openSharedPickerFor, setOpenSharedPickerFor] = useState<string | null>(null);
 
-    /** Manage to mark a document as uploaded */
+    /** Manage to mark a document as uploaded (or remove the satisfaction). Toggles handle both plain and SHARED-encoded entries. */
     const onMarkAsUploaded = async (docName: string, isChecked: boolean): Promise<void> => {
         if ( isReadOnly  ) return;
 
         const current: string[] = selectedStepInstance?.checkedDocuments ?? [];
-        const updated = isChecked ? current.filter(d => d !== docName) : [...current, docName];
+        // Strip every entry that targets this docName regardless of provenance encoding.
+        const cleared = current.filter(e => parseCheckedEntry(e).docName !== docName);
+        const updated = isChecked ? cleared : [...cleared, docName];
         try {
             const response: FetchResult<{ data: ApiResponse }> = await updateStepInstance({ id: selectedStepInstance?.id as number, input: { checkedDocuments: updated } });
             onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
@@ -82,6 +96,29 @@ const InstanceUploadDocumentsStep = (props: PropTypes): ReactElement => {
             console.error(e);
         }
     }
+
+    /** Satisfy an expected document by linking it to one of the documents shared with this operation. */
+    const onSatisfyFromShared = async (docName: string, kind: 'form' | 'doc', id: number): Promise<void> => {
+        if ( isReadOnly ) return;
+
+        const current: string[] = selectedStepInstance?.checkedDocuments ?? [];
+        const cleared = current.filter(e => parseCheckedEntry(e).docName !== docName);
+        const updated = [...cleared, encodeSharedEntry(docName, kind, id)];
+        try {
+            const response: FetchResult<{ data: ApiResponse }> = await updateStepInstance({ id: selectedStepInstance?.id as number, input: { checkedDocuments: updated } });
+            onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
+            setOpenSharedPickerFor(null);
+            await refreshInstance();
+        } catch ( e: any ) {
+            console.error(e);
+        }
+    }
+
+    /** Flatten all incoming shared rows from the instance's sourceLinks. */
+    const incomingShared = (instance?.sourceLinks ?? []).flatMap((l: any) => (l.sharedDocuments ?? []) as any[]);
+    const sharedForms = incomingShared.filter((row: any) => row.formInstance != null);
+    const sharedDocs = incomingShared.filter((row: any) => row.document != null);
+    const hasIncomingShared = sharedForms.length + sharedDocs.length > 0;
 
     if( !selectedBlueprintStep || !selectedStepInstance ) {
         return <></>;
@@ -144,6 +181,17 @@ const InstanceUploadDocumentsStep = (props: PropTypes): ReactElement => {
         if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
     };
 
+    /** Resolve a label for an existing SHARED provenance entry so we can show what satisfied a requirement. */
+    const labelForProvenance = (parsed: CheckedDocEntry): string | null => {
+        if (!parsed.sharedKind || parsed.sharedId == null) return null;
+        if (parsed.sharedKind === 'form') {
+            const row = sharedForms.find((r: any) => r.formInstance?.id === parsed.sharedId);
+            return row?.formInstance?.displayName ?? (row ? `Form #${row.formInstance.id}` : `Form #${parsed.sharedId}`);
+        }
+        const row = sharedDocs.find((r: any) => r.document?.id === parsed.sharedId);
+        return row?.document?.fileName ?? `Document #${parsed.sharedId}`;
+    };
+
     /** Manage to render the expected documents list */
     const renderExpectedDocuments = (): ReactElement => (
         <div className="p-4 rounded-xl border border-black/6 bg-[#F8F9FA]">
@@ -153,21 +201,83 @@ const InstanceUploadDocumentsStep = (props: PropTypes): ReactElement => {
             </div>
             <div className="space-y-2">
                 { (selectedBlueprintStep?.expectedDocuments ?? []).filter(Boolean).map((docName: string) => {
-                    const isChecked = (selectedStepInstance?.checkedDocuments ?? []).includes(docName);
+                    const checkedEntries = selectedStepInstance?.checkedDocuments ?? [];
+                    const match = findEntryForDoc(checkedEntries, docName);
+                    const isChecked = match != null;
+                    const provenanceLabel = match ? labelForProvenance(match.parsed) : null;
                     const canToggle = !isReadOnly;
+                    const isPickerOpen = openSharedPickerFor === docName;
 
                     return (
-                        <button key={docName} disabled={!canToggle}
-                            onClick={() => onMarkAsUploaded(docName, isChecked)}
-                            className={`w-full flex items-center gap-2 p-2 rounded-lg border transition-colors text-left ${
-                                isChecked ? "border-emerald-200 bg-emerald-50/40" : "border-black/6 bg-white"
-                            } ${canToggle ? "cursor-pointer hover:border-emerald-300" : "cursor-default"}`}
-                        >
-                            { isChecked ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <Circle className="w-4 h-4 text-black/20 shrink-0" /> }
-                            <span className={`text-sm font-[Lato-Regular] flex-1 ${isChecked ? "text-emerald-700 line-through" : "text-black/60"}`}>
-                                { docName }
-                            </span>
-                        </button>
+                        <div key={docName} className={`rounded-lg border transition-colors ${
+                            isChecked ? "border-emerald-200 bg-emerald-50/40" : "border-black/6 bg-white"
+                        }`}>
+                            <div className="flex items-center gap-2 p-2">
+                                <button disabled={!canToggle} onClick={() => onMarkAsUploaded(docName, isChecked)}
+                                    className={`flex items-center gap-2 flex-1 text-left ${canToggle ? "cursor-pointer" : "cursor-default"}`}
+                                >
+                                    { isChecked ? <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" /> : <Circle className="w-4 h-4 text-black/20 shrink-0" /> }
+                                    <div className="flex-1 min-w-0">
+                                        <span className={`text-sm font-[Lato-Regular] ${isChecked ? "text-emerald-700 line-through" : "text-black/60"}`}>
+                                            { docName }
+                                        </span>
+                                        { provenanceLabel &&
+                                            <p className="text-[10px] text-emerald-600/80 font-[Lato-Regular] mt-0.5 truncate">
+                                                via shared: { provenanceLabel }
+                                            </p>
+                                        }
+                                    </div>
+                                </button>
+                                { canToggle && hasIncomingShared && !isChecked &&
+                                    <button onClick={() => setOpenSharedPickerFor(isPickerOpen ? null : docName)}
+                                        className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-[Lato-Bold] border transition-colors cursor-pointer ${
+                                            isPickerOpen ? 'border-violet-400 bg-violet-50 text-violet-600' : 'border-violet-200 bg-violet-50/40 text-violet-500 hover:bg-violet-50'
+                                        }`}
+                                        title="Satisfy this requirement using a document shared with this operation"
+                                    >
+                                        <Link2 className="w-3 h-3" />
+                                        Use shared
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                }
+                            </div>
+                            { isPickerOpen && hasIncomingShared &&
+                                <div className="border-t border-black/6 bg-white max-h-44 overflow-y-auto">
+                                    { sharedForms.length > 0 &&
+                                        <div className="px-2 py-1 text-[10px] font-[Lato-Bold] text-black/40 uppercase tracking-wider"> Forms </div>
+                                    }
+                                    { sharedForms.map((row: any) => {
+                                        const label = row.formInstance?.displayName ?? `Form #${row.formInstance?.id}`;
+                                        return (
+                                            <button key={`f-${row.id}`}
+                                                onClick={() => onSatisfyFromShared(docName, 'form', row.formInstance.id)}
+                                                className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-violet-50/40 cursor-pointer border-t border-black/4"
+                                            >
+                                                <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                                                <span className="text-xs font-[Lato-Regular] text-black/70 truncate"> { label } </span>
+                                                { row.formInstance?.status &&
+                                                    <span className="text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full bg-blue-50 text-blue-600 border border-blue-200/50 ml-auto shrink-0">
+                                                        { row.formInstance.status }
+                                                    </span>
+                                                }
+                                            </button>
+                                        );
+                                    })}
+                                    { sharedDocs.length > 0 &&
+                                        <div className="px-2 py-1 text-[10px] font-[Lato-Bold] text-black/40 uppercase tracking-wider"> Files </div>
+                                    }
+                                    { sharedDocs.map((row: any) => (
+                                        <button key={`d-${row.id}`}
+                                            onClick={() => onSatisfyFromShared(docName, 'doc', row.document.id)}
+                                            className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-violet-50/40 cursor-pointer border-t border-black/4"
+                                        >
+                                            <Paperclip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                            <span className="text-xs font-[Lato-Regular] text-black/70 truncate"> { row.document?.fileName } </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            }
+                        </div>
                     );
                 })}
             </div>

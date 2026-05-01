@@ -6,6 +6,31 @@ export const SignatureFieldRenderer = ({ field, disabled }: any): ReactElement =
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const isDrawingRef = useRef(false);
 
+	/** Convert a mouse event's client coords to canvas pixel coords, accounting
+	 *  for any CSS scaling between the element's rendered size and its intrinsic
+	 *  pixel buffer (width/height attributes). */
+	const toCanvasPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+		const canvas = canvasRef.current!;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		return {
+			x: (e.clientX - rect.left) * scaleX,
+			y: (e.clientY - rect.top) * scaleY,
+		};
+	}, []);
+
+	const toCanvasPosTouch = useCallback((touch: React.Touch) => {
+		const canvas = canvasRef.current!;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		return {
+			x: (touch.clientX - rect.left) * scaleX,
+			y: (touch.clientY - rect.top) * scaleY,
+		};
+	}, []);
+
 	const startDrawing = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
 		if (disabled) return;
 		const canvas = canvasRef.current;
@@ -13,10 +38,10 @@ export const SignatureFieldRenderer = ({ field, disabled }: any): ReactElement =
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 		isDrawingRef.current = true;
-		const rect = canvas.getBoundingClientRect();
+		const { x, y } = toCanvasPos(e);
 		ctx.beginPath();
-		ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-	}, [disabled]);
+		ctx.moveTo(x, y);
+	}, [disabled, toCanvasPos]);
 
 	const draw = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
 		if (!isDrawingRef.current || disabled) return;
@@ -24,13 +49,13 @@ export const SignatureFieldRenderer = ({ field, disabled }: any): ReactElement =
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
-		const rect = canvas.getBoundingClientRect();
+		const { x, y } = toCanvasPos(e);
 		ctx.lineWidth = 2;
 		ctx.lineCap = 'round';
 		ctx.strokeStyle = '#1a1a1a';
-		ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+		ctx.lineTo(x, y);
 		ctx.stroke();
-	}, [disabled]);
+	}, [disabled, toCanvasPos]);
 
 	const stopDrawing = useCallback(() => {
 		if (!isDrawingRef.current) return;
@@ -49,11 +74,10 @@ export const SignatureFieldRenderer = ({ field, disabled }: any): ReactElement =
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
 		isDrawingRef.current = true;
-		const rect = canvas.getBoundingClientRect();
-		const touch = e.touches[0];
+		const { x, y } = toCanvasPosTouch(e.touches[0]);
 		ctx.beginPath();
-		ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
-	}, [disabled]);
+		ctx.moveTo(x, y);
+	}, [disabled, toCanvasPosTouch]);
 
 	const drawTouch = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
 		if (!isDrawingRef.current || disabled) return;
@@ -62,14 +86,13 @@ export const SignatureFieldRenderer = ({ field, disabled }: any): ReactElement =
 		if (!canvas) return;
 		const ctx = canvas.getContext('2d');
 		if (!ctx) return;
-		const rect = canvas.getBoundingClientRect();
-		const touch = e.touches[0];
+		const { x, y } = toCanvasPosTouch(e.touches[0]);
 		ctx.lineWidth = 2;
 		ctx.lineCap = 'round';
 		ctx.strokeStyle = '#1a1a1a';
-		ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+		ctx.lineTo(x, y);
 		ctx.stroke();
-	}, [disabled]);
+	}, [disabled, toCanvasPosTouch]);
 
 	const clearSignature = () => {
 		const canvas = canvasRef.current;

@@ -8,9 +8,8 @@ import {
 	type SetStateAction
 } from "react";
 import {
-	ConditionalVisibility,
-	EdgeConditionType,
 	LinkType,
+	OperationInstanceStatus,
 	OperationType,
 	StepInstanceStatus,
 	type BlueprintStep,
@@ -27,6 +26,7 @@ import type {
 import {
 	useOperationBlueprint
 } from "../../../server/hooks/useOperationBlueprint";
+import { computeVisibleSteps } from "../utils/step-visibility";
 
 interface UseWorkspaceInstanceTypes {
 	loading: boolean;
@@ -82,7 +82,8 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 					setSelectedStepInstanceId(firstActionable?.id ?? response.data.data.stepInstances[0].id);
 				}
 
-				const blueprint: FetchResult<{ data: OperationBlueprintDetail }> = await retrieveBlueprintById({ id: response.data.data.blueprintId.toString() });
+				const versionId = (response.data.data as any).blueprintVersionId?.toString();
+				const blueprint: FetchResult<{ data: OperationBlueprintDetail }> = await retrieveBlueprintById({ id: response.data.data.blueprintId.toString(), versionId });
 				if ( blueprint.data?.data ) {
 					setBlueprint(blueprint.data.data)
 				};
@@ -97,14 +98,14 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 	const selectedStepInstance: StepInstance | null = useMemo(() => {
 		if ( !selectedStepInstanceId || !instance ) return null;
 
-		return instance.stepInstances.find(si => si.id == selectedStepInstanceId) ?? null;
+		return instance.stepInstances.find(si => Number(si.id) === Number(selectedStepInstanceId)) ?? null;
 	}, [selectedStepInstanceId, instance]);
 
 	/** Manage to memorize the blueprint step */
 	const selectedBlueprintStep: BlueprintStep | null = useMemo(() => {
 		if ( !selectedStepInstance || !blueprint ) return null;
 
-		return blueprint.steps.find(s => s.id == selectedStepInstance.stepId) ?? null;
+		return blueprint.steps.find(s => Number(s.id) === Number(selectedStepInstance.stepId)) ?? null;
 	}, [selectedStepInstance, blueprint]);
 
 	/** Manage to memorize all the global operation instances linked */
@@ -141,7 +142,8 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 		return instance.targetLinks.filter(link => link.linkType === LinkType.DEPENDS_ON) as Partial<OperationInstance>[];
 	}, [instance?.targetLinks]);
 
-	// Instances eligible to be linked via OTHER_OTHER (for allowInstanceLink steps)
+	// Instances eligible to be linked via OTHER_OTHER (for allowInstanceLink steps).
+	// Filters: same office as the source op, blueprint not at its maxGlobalOperations cap, not already linked.
 	const linkableOtherInstances: OperationInstance[] = useMemo(() => {
 		if ( !instance ) return [];
 
@@ -150,16 +152,39 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 				.filter(link => link.linkType === LinkType.OTHER_OTHER || link.linkType === LinkType.GLOBAL_OTHER)
 				.map(link => link.targetInstanceId)
 		);
-		
-		return instances.filter(i => i.id !== instance.id && i.blueprint?.type === OperationType.OTHER && !linkedTargetIds.has(i.id));
-	}, [instances, instance?.id, instance?.sourceLinks]); 
+
+		const TERMINAL_STATUSES: OperationInstanceStatus[] = [
+			OperationInstanceStatus.CLOSED,
+			OperationInstanceStatus.COMPLETED_READY,
+			OperationInstanceStatus.PENDING_PAYMENT,
+			OperationInstanceStatus.PARTIALLY_CLOSED,
+		];
+
+		const activeCountByBlueprint = new Map<number, number>();
+		for (const i of instances) {
+			if (TERMINAL_STATUSES.includes(i.status as OperationInstanceStatus)) continue;
+			if (i.officeId !== instance.officeId) continue;
+			activeCountByBlueprint.set(i.blueprintId, (activeCountByBlueprint.get(i.blueprintId) ?? 0) + 1);
+		}
+
+		return instances.filter(i => {
+			if (i.id === instance.id) return false;
+			if (i.blueprint?.type !== OperationType.OTHER) return false;
+			if (linkedTargetIds.has(i.id)) return false;
+			if (i.officeId !== instance.officeId) return false;
+
+			const cap = i.blueprint?.maxGlobalOperations ?? null;
+			if (cap != null && (activeCountByBlueprint.get(i.blueprintId) ?? 0) >= cap) return false;
+
+			return true;
+		});
+	}, [instances, instance?.id, instance?.officeId, instance?.sourceLinks]);
 
 	// An instance is "launched" (i.e. linked from another operation) when:
 	// 1. It was opened by an OPEN_OPERATION step (launchedFromInstanceId is set), OR
 	// 2. It was created via Request Global Operation modal (has GLOBAL_OTHER source links)
 	const isLaunched: boolean = useMemo(() => {
 		if ( !instance ) return false;
-
 		return !!instance.launchedFromInstanceId || instance.sourceLinks.some(link => link.linkType === LinkType.GLOBAL_OTHER);
 	}, [instance?.launchedFromInstanceId, instance?.sourceLinks]);
 
@@ -167,62 +192,12 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 	const visibleStepInstances: StepInstance[] = useMemo(() => {
 		if ( !instance || !blueprint ) return instance?.stepInstances ?? [];
 
-		const edges = blueprint.edges ?? [];
-
-		// Helper: filter by conditionalVisibility only (used as fallback for no-branching ops)
-		const filterByVisibility = (si: StepInstance) => {
-			const bpStep = blueprint.steps.find(s => s.id == si.stepId);
-
-			if ( !bpStep ) return true;
-			const cv = bpStep.conditionalVisibility;
-
-			if (cv === ConditionalVisibility.LINKED_ONLY && !isLaunched) return false;
-			if (cv === ConditionalVisibility.STANDALONE_ONLY && isLaunched) return false;
-			return true;
-		};
-
-		// Only apply path filtering when USER_CHOICE edges are defined
-		const hasUserChoiceEdges = edges.some(e => e.conditionType === EdgeConditionType.USER_CHOICE);
-		if (!hasUserChoiceEdges) {
-			return instance.stepInstances.filter(filterByVisibility);
-		}
-
-		const selectedEdgeByStepId = new Map<number, number>();
-		for (const si of instance.stepInstances) {
-			if (si.selectedEdgeId != null) selectedEdgeByStepId.set(Number(si.stepId), Number(si.selectedEdgeId));
-		}
-
-		const allTargetIds = new Set(edges.map(e => Number(e.targetId)));
-		const roots = blueprint.steps.filter(s => !allTargetIds.has(Number(s.id)));
-
-		const reachable = new Set<number>();
-		const queue: number[] = roots.map(s => Number(s.id));
-
-		while (queue.length > 0) {
-			const stepId = queue.shift()!;
-			if (reachable.has(stepId)) continue;
-			reachable.add(stepId);
-
-			const outgoing = edges.filter(e => Number(e.sourceId) === stepId);
-
-			for (const e of outgoing.filter(e => e.conditionType === EdgeConditionType.ALWAYS)) {
-				queue.push(Number(e.targetId));
-			}
-
-			const userChoiceEdges = outgoing.filter(e => e.conditionType === EdgeConditionType.USER_CHOICE);
-			if (userChoiceEdges.length > 0) {
-				const selectedEdgeId = selectedEdgeByStepId.get(stepId);
-				if (selectedEdgeId != null) {
-					const chosen = userChoiceEdges.find(e => Number(e.id) === selectedEdgeId);
-					if (chosen) queue.push(Number(chosen.targetId));
-				}
-			}
-		}
-
-		// Fallback: if BFS produced nothing (unexpected graph structure), show all
-		if (reachable.size === 0) return instance.stepInstances.filter(filterByVisibility);
-
-		return instance.stepInstances.filter(si => reachable.has(Number(si.stepId)) && filterByVisibility(si));
+		return computeVisibleSteps({
+			stepInstances: instance.stepInstances,
+			blueprintSteps: blueprint.steps,
+			edges: blueprint.edges ?? [],
+			isLaunched,
+		});
 	}, [instance?.stepInstances, blueprint, isLaunched]);
 
 	// After visibleStepInstances is computed (blueprint loaded), correct the selection
@@ -235,11 +210,8 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 
 		correctionRanRef.current = true;
 
-		const isCurrentVisible = visibleStepInstances.some(si => si.id == selectedStepInstanceId);
-		if ( !isCurrentVisible ) {
-			const firstVisible = visibleStepInstances.find(si => si.status !== StepInstanceStatus.COMPLETED);
-			setSelectedStepInstanceId(firstVisible?.id ?? visibleStepInstances[0]?.id ?? null);
-		}
+		const firstNonCompleted = visibleStepInstances.find(si => si.status !== StepInstanceStatus.COMPLETED);
+		setSelectedStepInstanceId(firstNonCompleted?.id ?? visibleStepInstances[0]?.id ?? null);
 	}, [visibleStepInstances, blueprint]);
 
 	const refreshInstance = useCallback(async () => {

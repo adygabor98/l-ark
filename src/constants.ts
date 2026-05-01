@@ -14,3 +14,8 @@ export enum OperationCreationSteps {
     OPERATION_FORM = 'OPERATION_FORM',
     OPERATION_BUILDER = 'OPERATION_BUILDER',
 }
+
+export enum AgendaViewMode {
+    WEEK = 'week',
+    MONTH = 'month'
+}

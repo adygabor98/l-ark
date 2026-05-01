@@ -22,7 +22,8 @@ import {
     OperationType,
     type ApiResponse,
     type OperationBlueprintDetail,
-    type OperationBlueprintInput
+    type OperationBlueprintInput,
+    type OperationBlueprintVersionInfo
 } from '@l-ark/types';
 import {
     useToast
@@ -39,7 +40,7 @@ import {
 import OperationBlueprintCreationForm from './components/operation-blueprint-creation-form';
 import OperationBlueprintBuilder from './components/operation-blueprint-builder';
 
-const OperationBlueprintDetail = (): ReactElement => {
+const OperationBlueprintDetailPage = (): ReactElement => {
     /** Location utilities */
 	const { state } = useLocation();
     /** Navigation utilities */
@@ -65,7 +66,9 @@ const OperationBlueprintDetail = (): ReactElement => {
     /** Toast utilities */
     const { onToast } = useToast();
     /** Operation blueprint api utilities */
-    const { retrieveBlueprintById, createOperationBlueprint, updateOperationBlueprint, deleteBlueprintOperation } = useOperationBlueprint();
+    const { retrieveBlueprintById, createOperationBlueprint, updateOperationBlueprint, publishBlueprint, deleteBlueprintOperation } = useOperationBlueprint();
+    /** Latest version info (for header badge and publish guard) */
+    const [latestVersion, setLatestVersion] = useState<OperationBlueprintVersionInfo | null>(null);
 
     useEffect(() => {
         if ( state?.id ) {            
@@ -75,9 +78,11 @@ const OperationBlueprintDetail = (): ReactElement => {
                 if ( response.data?.data ) {
                     const blueprint = response.data.data;
 
+                    setLatestVersion(blueprint.latestVersion ?? null);
+
                     methods.reset({
                         title: blueprint.title,
-                        description: blueprint.description,
+                        description: blueprint.description ?? '',
                         type: blueprint.type,
                         subType: blueprint.subType,
                         divisionId: blueprint.divisionId.toString(),
@@ -90,6 +95,7 @@ const OperationBlueprintDetail = (): ReactElement => {
                         })),
                         steps: blueprint.steps.map(s => ({
                             id: s.id.toString(),
+                            stableId: (s as any).stableId,
                             title: s.title,
                             description: s.description,
                             isBlocking: s.isBlocking,
@@ -128,20 +134,13 @@ const OperationBlueprintDetail = (): ReactElement => {
         navigate('/operations')
     }
 
-    /** Manage to publish an operation blueprint */
+    /** Manage to publish the latest DRAFT version of the blueprint */
     const onPublish = async (): Promise<void> => {
-        let values = methods.getValues();        
-
-        values.steps = values.steps.map(step => ({
-            ...step,
-            conditionalVisibility: ( (step.conditionalVisibility as any) == 'always' ? null : step.conditionalVisibility) as ConditionalVisibility,
-            expectedDocuments: typeof step.expectedDocuments === 'string' ? (step.expectedDocuments as string).split(',').map(s => s.trim()).filter(Boolean) : step.expectedDocuments,
-            notificationPersons: typeof step.notificationPersons === 'string' ? (step.notificationPersons as string).split(',').map(s => s.trim()).filter(Boolean) : step.notificationPersons
-        }));
+        if ( !state?.id ) return;
 
         try {
-            const response: FetchResult<{ data: ApiResponse }> = await updateOperationBlueprint({ id: state.id, input: {...values, publish: true } });
-            
+            const response: FetchResult<{ data: ApiResponse }> = await publishBlueprint({ id: state.id });
+
             onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
             if( response.data?.data.success ) {
                 onBack();
@@ -212,6 +211,7 @@ const OperationBlueprintDetail = (): ReactElement => {
 				<ReactFlowProvider>
 					<OperationBlueprintBuilder
 						blueprintId={state?.id}
+						latestVersion={latestVersion}
 						onBack={() => setStep(OperationCreationSteps.OPERATION_FORM)}
 						onPublish={onPublish}
 						onSaveDraft={onSaveDraft}
@@ -223,4 +223,4 @@ const OperationBlueprintDetail = (): ReactElement => {
 	);
 }
 
-export default OperationBlueprintDetail;
+export default OperationBlueprintDetailPage;

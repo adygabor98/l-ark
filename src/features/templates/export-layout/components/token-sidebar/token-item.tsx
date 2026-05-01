@@ -26,7 +26,7 @@ const TokenItem = ({ token }: TokenItemProps): ReactElement => {
             return;
         }
         const opts = token.options && token.options.length > 0 ? JSON.stringify(token.options) : undefined;
-        state.activeEditorInsertFn(token.fieldId, token.fieldLabel, token.fieldType, opts);
+        state.activeEditorInsertFn(token.fieldId, token.fieldLabel, token.fieldType, opts, token.suffix);
     };
 
     return (

@@ -190,7 +190,7 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
                                             <div className="grid grid-cols-12 gap-3">
                                                 <AnimatePresence initial={false}>
                                                     { activeSection.fields.map((field: any, fieldIdx: number) =>
-                                                        <div key={field.id} className={FIELD_WIDTH_MAP[(field.width as FieldWidth)] || 'col-span-12'}>
+                                                        <div key={field.id} id={`field-${field.id}`} className={FIELD_WIDTH_MAP[(field.width as FieldWidth)] || 'col-span-12'}>
                                                             <SortableField
                                                                 field={field}
                                                                 sectionIdx={getSectionId()}

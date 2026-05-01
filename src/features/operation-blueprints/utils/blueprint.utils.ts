@@ -46,6 +46,7 @@ export const getStatusBg = (status: OperationBlueprintStatus): string => {
 /** Manage to create a new step */
 export const createNewStep = (existingSteps: number): OperationBlueprintStepInput => ({
     id: uuid(),
+    stableId: uuid(),
     title: "New Step",
     description: "",
     isBlocking: false,

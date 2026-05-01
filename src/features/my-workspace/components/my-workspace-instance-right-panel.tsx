@@ -21,17 +21,11 @@ import {
 import {
 	useWorkspaceInstanceContext
 } from "../context/workspace-instance.context";
-import {
-	useNavigate
-} from "react-router-dom";
-import Button from "../../../shared/components/button";
 import { INSTANCE_STATUS_COLORS } from "../utils/my-workspace.utils";
 
 const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 	/** My workspace utilities */
 	const { instance, linkedGlobalInstances, linkedOtherInstances, launchedFromInstance } = useWorkspaceInstanceContext();
-	/** Navigation utilities */
-	const navigate = useNavigate();
 	/** To whom is assigned the current operation instance */
 	const assignee = instance?.assignedTo;
 	/** Who created this operation instance */
@@ -158,21 +152,19 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 						<p className="text-[10px] font-[Lato-Bold] text-black/30 uppercase tracking-widest mb-2"> Linked Operations </p>
 						<div className="space-y-1">
 							{ launchedFromInstance &&
-								<Button variant="link" onClick={() => navigate(`/workspace/detail/${launchedFromInstance.id}`)}>
+								<div className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
 									<ExternalLink className="w-3 h-3 text-blue-400 shrink-0" />
 									<span className="text-xs font-[Lato-Regular] text-blue-600 flex-1 truncate">
 										{ launchedFromInstance.title }
 									</span>
-									<ArrowRight className="w-3 h-3 text-blue-300 group-hover:text-blue-500 transition-colors shrink-0" />
-								</Button>
+									<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
+								</div>
 							}
 
 							{ linkedGlobalInstances.map(gi => {
 								const colors = INSTANCE_STATUS_COLORS[gi.status as keyof typeof INSTANCE_STATUS_COLORS];
 								return (
-									<button key={gi.id} onClick={() => navigate(`/workspace/detail/${gi.id}`)}
-										className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-violet-50/60 transition-colors cursor-pointer group"
-									>
+									<div key={gi.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
 										<Link2 className="w-3 h-3 text-violet-400 shrink-0" />
 										<span className="text-xs font-[Lato-Regular] text-violet-600 flex-1 truncate"> { gi.title } </span>
 										{ colors &&
@@ -180,8 +172,8 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 												{gi.status.replace(/_/g, " ")}
 											</span>
 										}
-										<ArrowRight className="w-3 h-3 text-violet-300 group-hover:text-violet-500 transition-colors shrink-0" />
-									</button>
+										<ArrowRight className="w-3 h-3 text-violet-300 shrink-0" />
+									</div>
 								);
 							})}
 
@@ -189,9 +181,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 								const colors = INSTANCE_STATUS_COLORS[oi.status as keyof typeof INSTANCE_STATUS_COLORS];
 
 								return (
-									<button key={oi.id} onClick={() => navigate(`/workspace/detail/${oi.id}`)}
-										className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-amber-50/60 transition-colors cursor-pointer group"
-									>
+									<div key={oi.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
 										<Link2 className="w-3 h-3 text-amber-400 shrink-0" />
 										<div className="flex-1 min-w-0">
 											<span className="text-xs font-[Lato-Regular] text-amber-700 truncate block"> { oi.title } </span>
@@ -202,15 +192,15 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 												{ oi.status.replace(/_/g, " ") }
 											</span>
 										}
-										<ArrowRight className="w-3 h-3 text-amber-300 group-hover:text-amber-500 transition-colors shrink-0" />
-									</button>
+										<ArrowRight className="w-3 h-3 text-amber-300 shrink-0" />
+									</div>
 								);
 							})}
 
 							{ instance.sourceLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).length > 0 &&
 								<div className="space-y-1 mb-3">
 									{ instance.sourceLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
-										<div key={l.id} onClick={() => navigate(`/workspace/detail/${l.targetInstanceId}`)} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-blue-50/60 transition-colors cursor-pointer group">
+										<div key={l.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
 											<Link2 className="w-3 h-3 text-blue-400 shrink-0" />
 											<div className="flex-1 min-w-0">
 												<span className="text-xs font-[Lato-Regular] text-blue-700 truncate block"> { l.targetInstance.title } </span>
@@ -219,7 +209,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0`}>
 												{ l.targetInstance.status.replace(/_/g, " ") }
 											</span>
-											<ArrowRight className="w-3 h-3 text-blue-300 group-hover:text-blue-500 transition-colors shrink-0" />
+											<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
 										</div>
 									))}
 								</div>
@@ -227,7 +217,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 							{ instance.targetLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).length > 0 &&
 								<div className="space-y-1 mb-3">
 									{ instance.targetLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
-										<div key={l.id} onClick={() => navigate(`/workspace/detail/${l.sourceInstanceId}`)} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-blue-50/60 transition-colors cursor-pointer group">
+										<div key={l.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
 											<Link2 className="w-3 h-3 text-blue-400 shrink-0" />
 											<div className="flex-1 min-w-0">
 												<span className="text-xs font-[Lato-Regular] text-blue-700 truncate block"> { l.sourceInstance.title } </span>
@@ -236,7 +226,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0`}>
 												{ l.sourceInstance.status.replace(/_/g, " ") }
 											</span>
-											<ArrowRight className="w-3 h-3 text-blue-300 group-hover:text-blue-500 transition-colors shrink-0" />
+											<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
 										</div>
 									))}
 								</div>

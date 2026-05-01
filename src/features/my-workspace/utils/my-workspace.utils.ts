@@ -77,15 +77,15 @@ export const canStartStep = (stepInstance: OperationInstanceStep, blueprint: Ope
 	if ( isReadOnly ) return false;
 	if ( stepInstance.status !== StepInstanceStatus.PENDING ) return false;
 
-	const bpStep = blueprint.steps.find((s: any) => s.id == stepInstance.stepId);
+	const bpStep = blueprint.steps.find((s: any) => Number(s.id) === Number(stepInstance.stepId));
 	if ( !bpStep ) return false;
 
-	const predecessorEdges = blueprint.edges.filter((e: any) => e.targetId == bpStep.id);
+	const predecessorEdges = blueprint.edges.filter((e: any) => Number(e.targetId) === Number(bpStep.id));
 	for (const edge of predecessorEdges) {
-		const predStep = blueprint.steps.find((s: any) => s.id == edge.sourceId);
+		const predStep = blueprint.steps.find((s: any) => Number(s.id) === Number(edge.sourceId));
 
 		if ( predStep?.isBlocking ) {
-			const predInstance = instance.stepInstances.find(si => si.stepId == edge.sourceId);
+			const predInstance = instance.stepInstances.find(si => Number(si.stepId) === Number(edge.sourceId));
 			if ( predInstance && predInstance.status !== StepInstanceStatus.COMPLETED && predInstance.status !== StepInstanceStatus.SKIPPED ) {
 				return false;
 			}

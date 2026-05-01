@@ -1,9 +1,10 @@
 import {
 	useEffect,
-	useState,
 	useMemo,
+	useState,
 	type ReactElement
 } from "react";
+import LaunchOperationDialog from "./launch-operation-dialog/launch-operation-dialog";
 import {
 	useNavigate
 } from "react-router-dom";
@@ -29,6 +30,10 @@ import {
 	type ApiResponse,
 	type OperationInstance
 } from "@l-ark/types";
+import {
+	filterEligibleInstances,
+	PREREQUISITE_ELIGIBLE_STATUSES,
+} from "../utils/eligible-instances";
 import {
 	useOperationInstance
 } from "../../../server/hooks/useOperationInstance";
@@ -63,6 +68,8 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 	const { onToast } = useToast();
 	/** Selected global and other instance IDs */
 	const [selectedGlobalBlueprintId, setSelectedGlobalBlueprintId] = useState<number | null>(null);
+	/** When the user has finished picking instances, the launch dialog opens to set title/description + shared docs */
+	const [showLaunchDialog, setShowLaunchDialog] = useState<boolean>(false);
 	
 	if( !instance ) {
 		return <></>;
@@ -78,35 +85,34 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 
 	/** Manage to memorize the available global blueprints */
 	const availableGlobalBlueprints = useMemo(() => {
-		return blueprints.filter((op) => op.type === OperationType.GLOBAL && op.status !== OperationBlueprintStatus.DRAFT);
+		return blueprints.filter((op) =>
+			op.type === OperationType.GLOBAL
+			&& op.status !== OperationBlueprintStatus.DRAFT
+			&& op.status !== OperationBlueprintStatus.ARCHIVED
+		);
 	}, [blueprints]);
 	/** Retrieve the information of the selected global blueprint */
 	const selectedGlobalBlueprint = availableGlobalBlueprints.find((bp) => bp.id === selectedGlobalBlueprintId);
-
+	
 	/** Manage to memorize the prerequisites need it for the current operation */
 	const requiredOtherBlueprints = useMemo(() => {
 		if ( !selectedGlobalBlueprint ) return [];
 		return (selectedGlobalBlueprint.prerequisites ?? []).map(p => p.requiredBlueprint).filter(Boolean);
 	}, [selectedGlobalBlueprint]);
 	/** Manage to memorize the required blueprints ids */
-	const requiredBlueprintIds = useMemo(() => new Set(requiredOtherBlueprints.map(bp => bp.id)), [requiredOtherBlueprints]);
+	const requiredBlueprintIds = useMemo(() => new Set((requiredOtherBlueprints ?? []).map((bp) => bp.id)), [requiredOtherBlueprints]);
 	/** Get eligible completed other instances for each required blueprint  */
 	const eligibleInstances = useMemo(() => {
 		const map: Record<number, OperationInstance[]> = {};
 
 		for (const reqBp of requiredOtherBlueprints) {
-			const bpId = Number(reqBp.id);
-			map[bpId] = instances.filter(inst => {
-				if ( inst.blueprintId !== bpId || inst.officeId !== instance.officeId ) return false;
-				if ( inst.id === instance.id ) return true;
-				const hasValidStatus =
-					inst.status === OperationInstanceStatus.COMPLETED_READY ||
-					inst.status === OperationInstanceStatus.CLOSED ||
-					inst.status === OperationInstanceStatus.PARTIALLY_CLOSED;
-				if ( !hasValidStatus ) return false;
-				const maxGlobal = inst.blueprint?.maxGlobalOperations ?? null;
-				const currentGlobalCount = (inst.targetLinks ?? []).filter(l => l.linkType === LinkType.GLOBAL_OTHER).length;
-				return maxGlobal === null || currentGlobalCount < maxGlobal;
+			const bpId = parseInt(reqBp.id);
+			map[bpId] = filterEligibleInstances({
+				instances,
+				blueprintId: bpId,
+				officeId: instance.officeId,
+				allowedStatuses: PREREQUISITE_ELIGIBLE_STATUSES,
+				alwaysIncludeId: instance.id,
 			});
 		}
 		return map;
@@ -114,15 +120,13 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 	/** Additional non-required OTHER instances from the same office that are completed */
 	const additionalEligibleInstances = useMemo(() => {
 		if ( !selectedGlobalBlueprint ) return [];
+		// Same eligibility rules as required prerequisites, except: must NOT be the
+		// current instance, must NOT match a required blueprint id, must be OTHER type.
 		return instances.filter(inst => {
 			if ( inst.id === instance.id || inst.officeId !== instance.officeId ) return false;
 			if ( inst.blueprint?.type !== OperationType.OTHER ) return false;
 			if ( requiredBlueprintIds.has(inst.blueprintId) ) return false;
-			const hasValidStatus =
-				inst.status === OperationInstanceStatus.COMPLETED_READY ||
-				inst.status === OperationInstanceStatus.PARTIALLY_CLOSED ||
-				inst.status === OperationInstanceStatus.CLOSED;
-			if ( !hasValidStatus ) return false;
+			if ( !PREREQUISITE_ELIGIBLE_STATUSES.has(inst.status as OperationInstanceStatus) ) return false;
 			const maxGlobal = inst.blueprint?.maxGlobalOperations ?? null;
 			const currentGlobalCount = (inst.targetLinks ?? []).filter(l => l.linkType === LinkType.GLOBAL_OTHER).length;
 			return maxGlobal === null || currentGlobalCount < maxGlobal;
@@ -148,15 +152,21 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 		});
 	}, [selectedGlobalBlueprint, requiredOtherBlueprints, selectedOtherInstanceIds, instances, instance]);
 
-	/** Manage to link the operation (and created if need it) */
-	const handleRequest = async (): Promise<void> => {
+	/** Manage to link the operation (and create if needed). Now accepts custom title/description and shared docs. */
+	const performRequest = async (payload: { title: string; description: string; sharedFormInstanceIds: number[]; sharedDocumentIds: number[] }): Promise<void> => {
 		if ( !selectedGlobalBlueprint || !allRequirementsMet ) return;
 
-		const response: FetchResult<{ data: ApiResponse }> = await createInstance({ input: { blueprintId: selectedGlobalBlueprint.id, officeId: instance.officeId, description: selectedGlobalBlueprint.description } });
+		const response: FetchResult<{ data: ApiResponse }> = await createInstance({ input: {
+			blueprintId: selectedGlobalBlueprint.id,
+			officeId: instance.officeId,
+			title: payload.title,
+			description: payload.description || (selectedGlobalBlueprint.description ?? ''),
+		} });
 
 		if ( !response.data?.data?.success ) return;
 
 		onToast({ message: response.data.data.message, type: "success" });
+		setShowLaunchDialog(false);
 		onSuccess?.();
 		onClose();
 
@@ -168,11 +178,17 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 			.sort((a, b) => b.id - a.id)[0];
 
 		if ( newGlobalInstance?.id ) {
-			await linkInstances({ input: { sourceInstanceId: newGlobalInstance.id, targetInstanceIds: selectedOtherInstanceIds, linkType: LinkType.GLOBAL_OTHER } });
+			await linkInstances({ input: {
+				sourceInstanceId: newGlobalInstance.id,
+				targetInstanceIds: selectedOtherInstanceIds,
+				linkType: LinkType.GLOBAL_OTHER,
+				sharedFormInstanceIds: payload.sharedFormInstanceIds,
+				sharedDocumentIds: payload.sharedDocumentIds,
+			} });
 
 			await Promise.all( selectedOtherInstanceIds.map((instId) => updateInstanceStatus({ id: instId, status: OperationInstanceStatus.CLOSED }) ));
 
-			navigate("/workspace/detail", { state: { id: newGlobalInstance.id } });
+			navigate(`/workspace/detail/${newGlobalInstance.id}`);
 		} else {
 			navigate("/workspace");
 		}
@@ -371,12 +387,24 @@ const MyWorkspaceRequestOperation = (props: PropTypes): ReactElement => {
 				{/* Footer */}
 				<div className="px-6 py-4 border-t border-black/6 flex items-center justify-end gap-3">
 					<Button variant="secondary" onClick={onClose}> Cancel </Button>
-					<Button variant="primary" onClick={handleRequest} disabled={!allRequirementsMet}>
+					<Button variant="primary" onClick={() => setShowLaunchDialog(true)} disabled={!allRequirementsMet}>
 						<Globe className="w-4 h-4" />
 						Request Global Operation
 					</Button>
 				</div>
 			</div>
+
+			{ showLaunchDialog && selectedGlobalBlueprint &&
+				<LaunchOperationDialog
+					isOpen={showLaunchDialog}
+					onClose={() => setShowLaunchDialog(false)}
+					fixedBlueprint={{ id: selectedGlobalBlueprint.id, title: selectedGlobalBlueprint.title, description: selectedGlobalBlueprint.description ?? undefined, subType: selectedGlobalBlueprint.subType }}
+					headerTitle="Request Global Operation"
+					headerSubtitle="Set the title, description, and pick documents to share."
+					submitLabel="Request"
+					onSubmit={performRequest}
+				/>
+			}
 		</div>
 	);
 };

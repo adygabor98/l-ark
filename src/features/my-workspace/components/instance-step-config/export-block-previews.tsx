@@ -11,8 +11,7 @@ import type {
 	AvailableToken,
 	FormGridRow,
 	FormGridCell,
-	FieldGridEntry,
-	CheckboxGridItem
+	FieldGridEntry
 } from "../../../templates/export-layout/export-layout.models";
 import type {
 	FieldValueMap
@@ -29,10 +28,12 @@ export const RichTextPreview = ({ content, extensions }: { content?: Record<stri
 		html = "<p></p>";
 	}
 
-	return <div
-		className="prose prose-sm max-w-none text-sm leading-relaxed whitespace-pre-wrap [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6"
-		dangerouslySetInnerHTML={{ __html: html }}
-	/>;
+	return (
+		<div
+			className="prose prose-sm max-w-none text-sm leading-relaxed whitespace-pre-wrap [&_ol]:list-decimal [&_ul]:list-disc [&_ol]:pl-6 [&_ul]:pl-6"
+			dangerouslySetInnerHTML={{ __html: html }}
+		/>
+	);
 };
 
 const formatCellValue = (val: unknown): string => {
@@ -55,14 +56,13 @@ export const TablePreview = ({ block, fieldValues, tokens }: { block: ExportBloc
 	const token = tokens.find(t => t.fieldId === block.sourceFieldId);
 	const rawCols = token?.columns ?? [];
 
-	const displayCols = block.settings.tableColumns?.length
-		? block.settings.tableColumns
-			.filter(tc => tc.visible)
-			.map(tc => {
-				const raw = rawCols.find(c => c.id === tc.colId);
-				return { id: tc.colId, name: raw?.name ?? tc.label, widthPct: tc.widthPct };
-			})
-		: rawCols.map(c => ({ id: c.id, name: c.name, widthPct: undefined as number | undefined }));
+	const displayCols = block.settings.tableColumns?.length ? block.settings.tableColumns
+		.filter(tc => tc.visible)
+		.map(tc => {
+			const raw = rawCols.find(c => c.id === tc.colId);
+			return { id: tc.colId, name: raw?.name ?? tc.label, widthPct: tc.widthPct, type: raw?.type };
+		})
+	: rawCols.map(c => ({ id: c.id, name: c.name, widthPct: undefined as number | undefined, type: c.type }));
 	const hasColumns = displayCols.length > 0;
 
 	const tableData = fieldValues.get(String(block.sourceFieldId));
@@ -83,11 +83,24 @@ export const TablePreview = ({ block, fieldValues, tokens }: { block: ExportBloc
 			{ rows.length > 0 ?
 				rows.map((row, i) => (
 					<div key={i} className={`flex ${block.settings.borderStyle !== "none" ? "border-b border-black/6 last:border-0" : ""} ${block.settings.alternatingRows && i % 2 === 1 ? "bg-black/2" : ""}`}>
-						{ hasColumns ? displayCols.map(col => (
-								<div key={col.id} className="px-3 py-2" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
-									{ formatCellValue(row[col.id] ?? row[col.name]) }
-								</div>
-							))
+						{ hasColumns ? displayCols.map(col => {
+								const cellVal = row[col.id] ?? row[col.name];
+								if (col.type === 'SIGNATURE') {
+									return (
+										<div key={col.id} className="px-3 py-2" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
+											{ cellVal && typeof cellVal === 'string' && cellVal.startsWith('data:image')
+												? <img src={cellVal} alt="signature" style={{ maxHeight: 40, maxWidth: '100%' }} />
+												: <span className="text-black/20 text-xs italic">—</span>
+											}
+										</div>
+									);
+								}
+								return (
+									<div key={col.id} className="px-3 py-2" style={{ flex: col.widthPct ? `0 0 ${col.widthPct}%` : 1 }}>
+										{ formatCellValue(cellVal) }
+									</div>
+								);
+							})
 						:
 							<div className="px-3 py-2 w-full"> { JSON.stringify(row) } </div>
 						}
@@ -268,33 +281,38 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 	const compact: boolean = block.settings.gridCompact ?? false;
 
 	const resolveLabel = (entry: FieldGridEntry): string => {
-		if (entry.type === "custom") return entry.customLabel ?? "";
+		if ( entry.type === "custom" ) return entry.customLabel ?? "";
 		const token = entry.fieldId ? tokens.find(t => t.fieldId === entry.fieldId) : undefined;
 		return token?.fieldLabel ?? "";
 	};
 
 	const resolveValue = (entry: FieldGridEntry): string => {
-		if (entry.type === "custom") return entry.customValue ?? "—";
-		if (!entry.fieldId) return "";
+		if ( entry.type === "custom" ) return entry.customValue ?? "—";
+		if ( !entry.fieldId ) return "";
+
 		const raw = fieldValues.get(entry.fieldId);
-		if (raw === undefined || raw === null || raw === "") return "";
+		if ( raw === undefined || raw === null || raw === "" ) return "";
 		const token = tokens.find(t => t.fieldId === entry.fieldId);
-		if (token && ["CHECKBOX", "RADIO_GROUP", "SELECT"].includes(token.fieldType)) {
+		if ( token && ["CHECKBOX", "RADIO_GROUP", "SELECT"].includes(token.fieldType) ) {
 			const opts = token.options ?? [];
 			const vals = Array.isArray(raw) ? raw as string[] : [String(raw)];
 			return vals.map(v => opts.find(o => o.value === v || o.label === v)?.label ?? v).join(", ");
 		}
-		if (token?.fieldType === "BOOLEAN") {
+		if ( token?.fieldType === "BOOLEAN" ) {
 			return raw === true || raw === "true" || raw === "Yes" ? "Sí" : "No";
 		}
-		if (token?.fieldType === "CURRENCY") {
+		if ( token?.fieldType === "NUMBER" && token?.suffix ) {
+			return `${raw} ${token.suffix}`;
+		}
+		if ( token?.fieldType === "CURRENCY" ) {
 			const num = typeof raw === "number" ? raw : parseFloat(String(raw));
 			const formatted = isNaN(num) ? String(raw) : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 			return `${formatted} €`;
 		}
-		if (token?.fieldType === "PERCENTAGE") {
+		if ( token?.fieldType === "PERCENTAGE" ) {
 			return `${raw}%`;
 		}
+
 		return String(raw);
 	};
 
@@ -312,9 +330,9 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 		const labelStyle: CSSProperties = { fontWeight: entry.labelBold ? "bold" : "normal", textAlign: entry.labelAlign ?? "left" };
 		const cellPad = compact ? "2px 6px" : "4px 8px";
 
-		if (entry.type === "spacer") return <div style={{ minHeight: 16 }} />;
+		if ( entry.type === "spacer" ) return <div style={{ minHeight: 16 }} />;
 
-		if (entry.type === "checkbox") {
+		if ( entry.type === "checkbox" ) {
 			const checked = hasValue && (value === "Sí" || value === "true" || value === "Yes");
 			return (
 				<div style={{ display: "flex", alignItems: "center", gap: 6, padding: cellPad }}>
@@ -324,8 +342,9 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 			);
 		}
 
-		if (entry.type === "radio") {
+		if ( entry.type === "radio" ) {
 			const selected = hasValue;
+
 			return (
 				<div style={{ display: "flex", alignItems: "center", gap: 6, padding: cellPad }}>
 					<span style={selected ? filledRadio : radioCircle} />
@@ -334,16 +353,15 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 			);
 		}
 
-		const valueNode = hasValue
-			? <span style={{ fontSize: 11 }}>{value}</span>
-			: valueStyle === "box"
-				? <span style={boxStyle}>&nbsp;</span>
-				: <span style={underlineStyle}>&nbsp;</span>;
+		const valueNode = hasValue ? <span style={{ fontSize: 11 }}>{value}</span>
+		: valueStyle === "box"
+			? <span style={boxStyle}>&nbsp;</span>
+			: <span style={underlineStyle}>&nbsp;</span>;
 
-		if (layout === "value-only") {
+		if ( layout === "value-only" ) {
 			return <div style={{ padding: cellPad }}>{valueNode}</div>;
 		}
-		if (layout === "stacked") {
+		if ( layout === "stacked" ) {
 			return (
 				<div style={{ padding: cellPad }}>
 					<div style={{ fontSize: 10, color: "rgba(0,0,0,0.5)", marginBottom: 2, ...labelStyle }}>{label}</div>
@@ -353,8 +371,8 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 		}
 		return (
 			<div style={{ display: "flex", alignItems: "baseline", gap: 8, padding: cellPad }}>
-				<span style={{ fontSize: 11, color: "rgba(0,0,0,0.6)", flexShrink: 0, width: `${labelWidth}%`, ...labelStyle }}>{label}:</span>
-				{valueNode}
+				<span style={{ fontSize: 11, color: "rgba(0,0,0,0.6)", flexShrink: 0, width: `${labelWidth}%`, ...labelStyle }}> { label }: </span>
+				{ valueNode }
 			</div>
 		);
 	};
@@ -365,8 +383,9 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 	let colPos = 0;
 	for (const entry of entries) {
 		const span = entry.colSpan ?? 1;
-		if (colPos + span > columns && currentRow.length > 0) {
+		if ( colPos + span > columns && currentRow.length > 0 ) {
 			while (currentRow.length < columns) currentRow.push(null);
+
 			gridCells.push(currentRow);
 			currentRow = [];
 			colPos = 0;
@@ -374,13 +393,13 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 		currentRow.push(entry);
 		colPos += span;
 		for (let i = 1; i < span && currentRow.length < columns; i++) currentRow.push(null);
-		if (colPos >= columns) {
+		if ( colPos >= columns ) {
 			gridCells.push(currentRow);
 			currentRow = [];
 			colPos = 0;
 		}
 	}
-	if (currentRow.length > 0) {
+	if ( currentRow.length > 0 ) {
 		while (currentRow.length < columns) currentRow.push(null);
 		gridCells.push(currentRow);
 	}
@@ -388,10 +407,11 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 	return (
 		<div style={{ border: showBorders ? `1px solid ${borderColor}` : "none", overflow: "hidden", fontSize: 11 }}>
 			<div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
-				{gridCells.flatMap(row =>
+				{ gridCells.flatMap(row =>
 					row.map((cell, ci) => {
-						if (!cell) return null;
+						if ( !cell ) return null;
 						const span = cell.colSpan ?? 1;
+
 						return (
 							<div key={`${cell.id}-${ci}`}
 								style={{
@@ -400,77 +420,11 @@ export const FieldGridPreview = ({ block, fieldValues, tokens }: { block: Export
 									borderRight: showBorders ? `1px solid ${borderColor}` : undefined,
 								}}
 							>
-								{renderCell(cell)}
+								{ renderCell(cell) }
 							</div>
 						);
 					})
 				)}
-			</div>
-		</div>
-	);
-};
-
-export const CheckboxGridPreview = ({ block, fieldValues, tokens }: { block: ExportBlock; fieldValues: FieldValueMap; tokens: AvailableToken[]; }): ReactElement => {
-	const items: CheckboxGridItem[] = block.settings.checkboxItems ?? [];
-	const columns: number = block.settings.checkboxColumns ?? 4;
-	const showBorders: boolean = block.settings.checkboxShowBorders ?? true;
-	const borderColor: string = block.settings.checkboxBorderColor ?? "#e5e7eb";
-	const compact: boolean = block.settings.checkboxCompact ?? false;
-	const style: string = block.settings.checkboxStyle ?? "checkbox";
-	const showTitle: boolean = block.settings.checkboxShowTitle ?? false;
-	const title: string = block.settings.checkboxTitle ?? "";
-
-	const getLabel = (item: CheckboxGridItem): string => {
-		if (item.customLabel) return item.customLabel;
-		if (item.fieldId) return tokens.find(t => t.fieldId === item.fieldId)?.fieldLabel ?? "";
-		return "";
-	};
-
-	const isChecked = (item: CheckboxGridItem): boolean => {
-		if (!item.fieldId) return false;
-		const val = fieldValues.get(item.fieldId);
-		if (val === undefined || val === null) return false;
-		if (typeof val === "boolean") return val;
-		if (val === "true" || val === "Yes" || val === "1") return true;
-		const label = getLabel(item);
-		if (Array.isArray(val)) return (val as string[]).some(v => v === label || v === item.fieldId);
-		return String(val) === label;
-	};
-
-	const checkboxBox: CSSProperties = { display: "inline-flex", alignItems: "center", justifyContent: "center", width: 11, height: 11, border: "1.5px solid rgba(0,0,0,0.5)", borderRadius: 2, flexShrink: 0 };
-	const filledCheckbox: CSSProperties = { ...checkboxBox, backgroundColor: "#059669", borderColor: "#059669", color: "#fff", fontSize: 9, fontWeight: 700, lineHeight: 1 };
-	const radioCircle: CSSProperties = { display: "inline-block", width: 11, height: 11, border: "1.5px solid rgba(0,0,0,0.5)", borderRadius: "50%", flexShrink: 0 };
-	const filledRadio: CSSProperties = { ...radioCircle, backgroundColor: "#000", borderColor: "#000" };
-
-	return (
-		<div style={{ border: showBorders ? `1px solid ${borderColor}` : "none", overflow: "hidden" }}>
-			{showTitle && title && (
-				<div style={{ padding: "4px 12px", fontSize: 11, color: "rgba(0,0,0,0.6)", background: "rgba(0,0,0,0.03)", borderBottom: showBorders ? `1px solid ${borderColor}` : "none" }}>
-					{title}
-				</div>
-			)}
-			<div style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, fontSize: 11 }}>
-				{items.map(item => {
-					const label = getLabel(item);
-					const checked = isChecked(item);
-					const isRadio = style === "radio" || (style === "mixed" && (item.isRadio ?? false));
-					const boxEl = isRadio
-						? <span style={checked ? filledRadio : radioCircle} />
-						: <span style={checked ? filledCheckbox : checkboxBox}>{checked ? "✓" : ""}</span>;
-					return (
-						<div key={item.id}
-							style={{
-								display: "flex", alignItems: "center", gap: 6,
-								padding: compact ? "3px 6px" : "5px 8px",
-								borderBottom: showBorders ? `1px solid ${borderColor}` : undefined,
-								borderRight: showBorders ? `1px solid ${borderColor}` : undefined,
-							}}
-						>
-							{boxEl}
-							<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(0,0,0,0.7)" }}>{label}</span>
-						</div>
-					);
-				})}
 			</div>
 		</div>
 	);
@@ -486,23 +440,6 @@ export const BlockPreview = ({ block, fieldValues, tokens, extensions }: { block
 			return <FormGridPreview block={block} fieldValues={fieldValues} tokens={tokens} />;
 		case "FIELD_GRID":
 			return <FieldGridPreview block={block} fieldValues={fieldValues} tokens={tokens} />;
-		case "CHECKBOX_GRID":
-			return <CheckboxGridPreview block={block} fieldValues={fieldValues} tokens={tokens} />;
-		case "SIGNATURE":
-			return <SignaturePreview block={block} fieldValues={fieldValues} tokens={tokens} />;
-		case "IMAGE":
-			return block.imageUrl ?
-				<div style={{ textAlign: block.settings.imageAlignment ?? "left" }}>
-					<img src={block.imageUrl} alt="Document image" style={{ width: block.settings.imageWidth ?? 200, display: "inline-block" }} className="max-w-full" />
-				</div>
-			:
-				<div className="border border-dashed border-black/15 rounded-lg h-16 flex items-center justify-center text-xs text-black/30">
-					Image placeholder
-				</div>
-			;
-		case "DIVIDER":
-			return <hr style={{ borderTopWidth: block.settings.lineWeight ?? 1, borderColor: block.settings.lineColor ?? "#e5e7eb", borderStyle: "solid" }} />;
-		case "PAGE_BREAK":
 		case "BLANK":
 			return null;
 		default:

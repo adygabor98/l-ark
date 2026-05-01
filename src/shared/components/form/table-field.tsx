@@ -1,8 +1,103 @@
-import type { ReactElement } from "react";
+import { useRef, useCallback, useEffect, type ReactElement } from "react";
 import { DatePicker, Switch } from "antd";
 import dayjs from "dayjs";
-import { Plus, Trash2 } from "lucide-react";
+import { PenTool, Plus, Trash2 } from "lucide-react";
 import { CELL_BASE } from "./field-styles";
+
+/** Compact inline signature canvas for use inside a table cell (100 × 100 px) */
+const TableSignatureCell = ({ value, onChange, disabled }: { value: any; onChange: (val: any) => void; disabled?: boolean }): ReactElement => {
+	const canvasRef = useRef<HTMLCanvasElement>(null);
+	const isDrawingRef = useRef(false);
+
+	/** Convert mouse client coords → canvas pixel coords, compensating for any
+	 *  CSS scaling between the element's rendered size and its pixel buffer. */
+	const getPos = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+		const canvas = canvasRef.current!;
+		const rect = canvas.getBoundingClientRect();
+		const scaleX = canvas.width / rect.width;
+		const scaleY = canvas.height / rect.height;
+		return {
+			x: (e.clientX - rect.left) * scaleX,
+			y: (e.clientY - rect.top) * scaleY,
+		};
+	}, []);
+
+	const onMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+		if (disabled) return;
+		const ctx = canvasRef.current?.getContext('2d');
+		if (!ctx) return;
+		isDrawingRef.current = true;
+		const { x, y } = getPos(e);
+		ctx.beginPath();
+		ctx.moveTo(x, y);
+	}, [disabled, getPos]);
+
+	const onMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+		if (!isDrawingRef.current || disabled) return;
+		const ctx = canvasRef.current?.getContext('2d');
+		if (!ctx) return;
+		const { x, y } = getPos(e);
+		ctx.lineWidth = 1.5;
+		ctx.lineCap = 'round';
+		ctx.strokeStyle = '#1a1a1a';
+		ctx.lineTo(x, y);
+		ctx.stroke();
+	}, [disabled, getPos]);
+
+	const onMouseUp = useCallback(() => {
+		if (!isDrawingRef.current) return;
+		isDrawingRef.current = false;
+		if (canvasRef.current) onChange(canvasRef.current.toDataURL('image/png'));
+	}, [onChange]);
+
+	const clear = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		const ctx = canvasRef.current?.getContext('2d');
+		if (ctx && canvasRef.current) ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+		onChange(null);
+	};
+
+	useEffect(() => {
+		if (value && canvasRef.current) {
+			const img = new Image();
+			img.onload = () => {
+				const ctx = canvasRef.current?.getContext('2d');
+				if (ctx && canvasRef.current) {
+					ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+					ctx.drawImage(img, 0, 0, canvasRef.current.width, canvasRef.current.height);
+				}
+			};
+			img.src = value;
+		}
+	}, []);
+
+	return (
+		<div className="relative" style={{ width: 100, height: 100 }}>
+			<canvas
+				ref={canvasRef}
+				width={200}
+				height={200}
+				onMouseDown={onMouseDown}
+				onMouseMove={onMouseMove}
+				onMouseUp={onMouseUp}
+				onMouseLeave={onMouseUp}
+				style={{ width: 100, height: 100 }}
+				className={`border border-dashed border-black/15 rounded-md bg-white ${disabled ? '' : 'cursor-crosshair'}`}
+			/>
+			{!value && !disabled && (
+				<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1 text-black/20">
+					<PenTool className="w-4 h-4" />
+					<span className="text-[10px] font-[Lato-Regular]">Sign here</span>
+				</div>
+			)}
+			{value && !disabled && (
+				<button type="button" onClick={clear} className="absolute top-0.5 right-0.5 p-0.5 rounded text-black/30 hover:text-red-500 bg-white/80 transition-colors cursor-pointer">
+					<Trash2 className="w-2.5 h-2.5" />
+				</button>
+			)}
+		</div>
+	);
+};
 
 /** Table cell input — renders the correct input type based on column type */
 const TableCellInput = ({ colType, value, onChange, disabled }: { colType: string; value: any; onChange: (val: any) => void; disabled?: boolean }): ReactElement => {
@@ -66,6 +161,8 @@ const TableCellInput = ({ colType, value, onChange, disabled }: { colType: strin
 			return (
 				<textarea className={`${CELL_BASE} resize-y min-h-8`} value={value ?? ''} onChange={(e) => onChange(e.target.value)} disabled={disabled} placeholder="—" rows={1} />
 			);
+		case 'SIGNATURE':
+			return <TableSignatureCell value={value} onChange={onChange} disabled={disabled} />;
 		case 'TEXT':
 		default:
 			return (
@@ -96,7 +193,11 @@ export const TableFieldRenderer = ({ field, columns, disabled }: any): ReactElem
 				<thead>
 					<tr className="bg-[#F8F9FA]">
 						{(columns ?? []).map((col: any, idx: number) => (
-							<th key={idx} className="text-left px-3 py-2 text-[11px] font-[Lato-Bold] text-black/50 uppercase tracking-wider border-b border-black/6">
+							<th
+								key={idx}
+								className="text-left px-3 py-2 text-[11px] font-[Lato-Bold] text-black/50 uppercase tracking-wider border-b border-black/6"
+								style={col.type === 'SIGNATURE' ? { width: 116, minWidth: 116 } : undefined}
+							>
 								{col.name}
 							</th>
 						))}
@@ -107,7 +208,11 @@ export const TableFieldRenderer = ({ field, columns, disabled }: any): ReactElem
 					{rows.map((row: any, rowIdx: number) => (
 						<tr key={rowIdx} className="border-b border-black/4 last:border-b-0">
 							{(columns ?? []).map((col: any, colIdx: number) => (
-								<td key={colIdx} className="px-2 py-1.5">
+								<td
+								key={colIdx}
+								className={col.type === 'SIGNATURE' ? 'p-2' : 'px-2 py-1.5'}
+								style={col.type === 'SIGNATURE' ? { width: 116, minWidth: 116 } : undefined}
+							>
 									<TableCellInput
 										colType={col.type ?? 'TEXT'}
 										value={row[col.name]}

@@ -86,6 +86,7 @@ export const EXECUTE_OPEN_OPERATION_STEP = gql`
     mutation gqlExecuteOpenOperationStep($input: ExecuteOpenOperationInput!) {
         data: gqlExecuteOpenOperationStep(input: $input) {
             ...OperationApiResponse
+            entityId
         }
     }
 `;
@@ -105,6 +106,16 @@ export const SELECT_DOCUMENTS_TO_SHARE = gql`
 
     mutation gqlSelectDocumentsToShare($input: SelectDocumentsToShareInput!) {
         data: gqlSelectDocumentsToShare(input: $input) {
+            ...OperationApiResponse
+        }
+    }
+`;
+
+export const MANAGE_SHARED_DOCUMENTS = gql`
+    ${API_OPERATION_RESPONSE}
+
+    mutation gqlManageSharedDocuments($input: ManageSharedDocumentsInput!) {
+        data: gqlManageSharedDocuments(input: $input) {
             ...OperationApiResponse
         }
     }
