@@ -32,13 +32,13 @@ const RootLayout = ({ children }: { children: ReactElement }): ReactElement => {
 
 	const allNavItems = [
 		{ icon: LayoutDashboard, label: t('titles.dashboard'), href: "/dashboard", permissions: [] },
-		{ icon: Calendar, label: t('titles.agenda'), href: "/agenda", permissions: [] },
-		{ icon: Building2, label: t('titles.offices'), href: "/offices", permissions: [] },
-		{ icon: Briefcase, label: t('titles.divisions'), href: "/divisions", permissions: [] },
-		{ icon: Users, label: t('titles.users'), href: "/users", permissions: [] },
-		{ icon: FolderCog, label: t('titles.operations'), href: "/operations", permissions: [] },
-		{ icon: Inbox, label: 'My Workspace', href: "/workspace", permissions: [] },
-		{ icon: LayoutTemplate, label: t('titles.templates'), href: "/templates", permissions: [] }
+		{ icon: Calendar, label: t('titles.agenda'), href: "/agenda", permissions: ['agenda.view_all', 'agenda.view_mine_and_sub', 'agenda.view_mine'] },
+		{ icon: Building2, label: t('titles.offices'), href: "/offices", permissions: ['offices.view'] },
+		{ icon: Briefcase, label: t('titles.divisions'), href: "/divisions", permissions: ['divisions.view'] },
+		{ icon: Users, label: t('titles.users'), href: "/users", permissions: ['users.view'] },
+		{ icon: FolderCog, label: t('titles.operations'), href: "/operations", permissions: ['operations.view'] },
+		{ icon: Inbox, label: 'My Workspace', href: "/workspace", permissions: ['operations.view'] },
+		{ icon: LayoutTemplate, label: t('titles.templates'), href: "/templates", permissions: ['templates.view'] }
 	];
 
 	/** Filter navigation items based on user permissions */

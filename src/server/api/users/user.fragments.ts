@@ -19,6 +19,8 @@ export const USER_LOGIN_FIELDS = gql`
         role {
             id
             name
+            code
+            permissions
         }
     }
 `;

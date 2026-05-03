@@ -36,6 +36,7 @@ import {
 	getShortNameUser
 } from '../utils/user.utils';
 import Logo from '../../../public/logo.png'
+import usePermissions from '../hooks/usePermissions';
 
 interface PropTypes {
 	isMobileMenuOpen: boolean;
@@ -54,6 +55,8 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, navItems}: PropTypes):
 	const dispatch = useDispatch();
 	/** Translation utilities */
 	const { t } = useTranslation();
+	/** Permissions utilities */
+	const { user } = usePermissions();
 
 	/** Manage to logout the current user from the app */
     const handleLogout = async (): Promise<void> => {
@@ -68,7 +71,7 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, navItems}: PropTypes):
     }
 
     return (
-        <aside className={`hidden md:flex bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/60 flex-col transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) relative z-20 ${isMobileMenuOpen ? "w-[90px]" : "w-[280px]"}`}>
+        <aside className={`hidden md:flex bg-white rounded-3xl shadow-[0_8px_30px_rgba(0,0,0,0.04)] border border-white/60 flex-col transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) relative z-20 ${isMobileMenuOpen ? "w-22.5" : "w-70"}`}>
 			<div className="absolute -right-3 top-10 z-50">
 				<button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className={`h-8 w-8 flex items-center justify-center rounded-full border border-border/50 shadow-md bg-white text-muted-foreground hover:text-accent hover:scale-110 transition-all duration-300 ${isMobileMenuOpen && "rotate-180"}`}>
 					<ChevronLeft className="h-4 w-4" />
@@ -145,13 +148,13 @@ const Sidebar = ({ isMobileMenuOpen, setIsMobileMenuOpen, navItems}: PropTypes):
 							<Avatar className="h-10 w-10 border-2 border-background shadow-md">
 								{/* <AvatarImage src={user?.avatar} /> 
 								<AvatarFallback className='font-[Lato-Bold] text-sm'> { getShortNameUser(user?.firstName, user?.lastName) } </AvatarFallback>*/}
-								<AvatarFallback className='font-[Lato-Bold] text-sm'> { getShortNameUser('George Adrian', 'Gabor') } </AvatarFallback>
+								<AvatarFallback className='font-[Lato-Bold] text-sm'> { getShortNameUser(user?.firstName, user?.lastName) } </AvatarFallback>
 							</Avatar>
 							<div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
 						</div>
 						<div className="flex-1 min-w-0">
-							<p className="text-sm font-bold text-foreground truncate"> { `${ 'George Adrian' } ${ 'Gabor' }` }</p>
-							<p className="text-xs text-muted-foreground truncate"> ggabor@outlook.es </p>
+							<p className="text-sm font-bold text-foreground truncate"> { `${ user?.firstName } ${ user?.lastName }` }</p>
+							<p className="text-xs text-muted-foreground truncate"> { user?.email } </p>
 						</div>
 						<div onClick={handleLogout} className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
 							<LogOut className="w-4 h-4" />

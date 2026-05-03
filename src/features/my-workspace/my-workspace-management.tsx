@@ -37,6 +37,7 @@ import {
     LinkType,
     OperationType,
     StepInstanceStatus,
+    UserRole,
     type ApiResponse,
     type OperationInstance
 } from '@l-ark/types';
@@ -60,6 +61,8 @@ import {
 } from '../../shared/components/badge';
 import MyWorkspaceHeader from './components/my-workspace-header';
 import Button from '../../shared/components/button';
+import PermissionGate from '../../shared/components/permission-gate';
+import usePermissions from '../../shared/hooks/usePermissions';
 
 const MyWorkspaceManagement = (): ReactElement => {
     /** Navigation utilities */
@@ -75,7 +78,9 @@ const MyWorkspaceManagement = (): ReactElement => {
 	const [pageSize, setPageSize] = useState<number>(10);
 	/** Ref to the scrollable container */
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
-
+	/** Permissions utilities */
+	const { user } = usePermissions();
+	
 	useEffect(() => {
 		retrieveInstances();
 	}, []);
@@ -100,7 +105,12 @@ const MyWorkspaceManagement = (): ReactElement => {
 	}, [sortedInstances, currentPage, pageSize]);
 
 	/** Redirect the user to the detail page */
-	const goToDetail = (id: number): void => {
+	const goToDetail = (id: number, typeOp: OperationType): void => {
+		console.log(user);
+		if( user?.role.code === UserRole.C && typeOp === OperationType.GLOBAL ) {
+			onToast({ message: 'You don\'t have permissions to access global operations.', type: 'warning' });
+			return;
+		}
 		navigate(`/workspace/detail/${id}`);
 	};
 
@@ -208,7 +218,7 @@ const MyWorkspaceManagement = (): ReactElement => {
 								const progress = getStepProgress(instance);
 
 								return (
-									<div key={instance.id} onClick={() => goToDetail(instance.id)}
+									<div key={instance.id} onClick={() => goToDetail(instance.id, instance.blueprint.type)}
 										className="grid grid-cols-[2fr_1fr_1.2fr_1.2fr_1.2fr_48px] gap-4 px-6 py-4 border-b border-black/4 last:border-b-0 hover:bg-black/1.5 cursor-pointer transition-colors duration-150 items-center"
 									>
 										<div className="flex items-center gap-3 min-w-0">
@@ -282,15 +292,17 @@ const MyWorkspaceManagement = (): ReactElement => {
 													</button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end" className="w-56 rounded-2xl border-black/5 shadow-xl p-2 bg-white/95 backdrop-blur-xl">
-													<DropdownMenuItem className="rounded-xl cursor-pointer p-3 transition-colors hover:bg-black/2" onClick={(e) => { e.stopPropagation(); goToDetail(instance.id); }}>
+													<DropdownMenuItem className="rounded-xl cursor-pointer p-3 transition-colors hover:bg-black/2" onClick={(e) => { e.stopPropagation(); goToDetail(instance.id, instance.blueprint.type); }}>
 														<FileEdit className="mr-3 h-4 w-4 text-black/40" />
 														<span className="font-[Lato-Regular] text-black/80"> Open Instance </span>
 													</DropdownMenuItem>
-													<DropdownMenuSeparator className="bg-black/2 my-2" />
-													<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, instance)}>
-														<Trash2 className="mr-3 h-4 w-4" />
-														<span className="font-[Lato-Regular]"> Delete </span>
-													</DropdownMenuItem>
+													<PermissionGate permissions="operations.soft_delete">
+														<DropdownMenuSeparator className="bg-black/2 my-2" />
+														<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, instance)}>
+															<Trash2 className="mr-3 h-4 w-4" />
+															<span className="font-[Lato-Regular]"> Delete </span>
+														</DropdownMenuItem>
+													</PermissionGate>
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</div>

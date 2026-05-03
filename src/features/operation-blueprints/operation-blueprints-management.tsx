@@ -44,6 +44,7 @@ import {
 } from '../../server/hooks/useOperationBlueprint';
 import Button from '../../shared/components/button';
 import { useNavigate } from 'react-router-dom';
+import PermissionGate from '../../shared/components/permission-gate';
 
 const OperationBlueprintsManagement = (): ReactElement => {
     /** Toast utilities */
@@ -171,12 +172,14 @@ const OperationBlueprintsManagement = (): ReactElement => {
 													<span className="font-[Lato-Regular]"> Archive </span>
 												</DropdownMenuItem>
 											}
-											{ canDelete(blueprint) &&
-												<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, blueprint)}>
-													<Trash2 className="mr-3 h-4 w-4" />
-													<span className="font-[Lato-Regular]"> Delete </span>
-												</DropdownMenuItem>
-											}
+											<PermissionGate permissions="operations.permanent_delete">
+												{ canDelete(blueprint) &&
+													<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, blueprint)}>
+														<Trash2 className="mr-3 h-4 w-4" />
+														<span className="font-[Lato-Regular]"> Delete </span>
+													</DropdownMenuItem>
+												}
+											</PermissionGate>
 										</DropdownMenuContent>
 									</DropdownMenu>
 								</div>

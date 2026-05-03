@@ -323,7 +323,7 @@ const ImportFormDataModal = ({
                                                 <div className="min-w-0">
                                                     <p className="font-[Lato-Bold] text-black/70 text-xs">{m.sourceLabel}</p>
                                                     {hasValue
-                                                        ? <p className="text-[11px] font-[Lato-Regular] text-black/40 truncate max-w-[140px]" title={preview}>{preview}</p>
+                                                        ? <p className="text-[11px] font-[Lato-Regular] text-black/40 truncate max-w-35" title={preview}>{preview}</p>
                                                         : <p className="text-[11px] font-[Lato-Regular] text-black/25 italic">empty</p>
                                                     }
                                                 </div>

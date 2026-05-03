@@ -46,6 +46,7 @@ import { useTranslation } from "react-i18next";
 import { useToast } from "../../shared/hooks/useToast";
 import type { FetchResult } from "@apollo/client";
 import type { ApiResponse } from "@l-ark/types";
+import PermissionGate from "../../shared/components/permission-gate";
 
 const TemplateManagement = (): ReactElement => {
     /** Navigation utilities */
@@ -253,20 +254,22 @@ const TemplateManagement = (): ReactElement => {
                                                 </>
                                             )}
 
-                                            {/* Permanent Delete — only for ARCHIVED or DRAFT */}
-                                            { canDelete(template) && (
-                                                <>
-                                                    <DropdownMenuSeparator className="bg-black/2 my-2" />
-                                                    <DropdownMenuItem
-                                                        className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors"
-                                                        onClick={e => handleDelete(e, template.id)}
-                                                        disabled={processingId === template.id}
-                                                    >
-                                                        <Trash2 className="mr-3 h-4 w-4" />
-                                                        <span className="font-[Lato-Regular]">{ t('templates.delete') }</span>
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
+                                            {/* Permanent Delete — only for ARCHIVED or DRAFT, DG/DIR only */}
+                                            <PermissionGate permissions="templates.permanent_delete">
+                                                { canDelete(template) && (
+                                                    <>
+                                                        <DropdownMenuSeparator className="bg-black/2 my-2" />
+                                                        <DropdownMenuItem
+                                                            className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors"
+                                                            onClick={e => handleDelete(e, template.id)}
+                                                            disabled={processingId === template.id}
+                                                        >
+                                                            <Trash2 className="mr-3 h-4 w-4" />
+                                                            <span className="font-[Lato-Regular]">{ t('templates.delete') }</span>
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </PermissionGate>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </div>

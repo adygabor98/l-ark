@@ -116,7 +116,7 @@ export const globalRoutes = [
 				path: "agenda",
 				element: (
 					<Suspense fallback={<Loading />}>
-						<ProtectedRoute>
+						<ProtectedRoute permissions={['agenda.view_all', 'agenda.view_mine_and_sub', 'agenda.view_mine']}>
 							<RootLayout>
 							<AgendaManagement />
 							</RootLayout>
@@ -143,7 +143,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="users.view">
 									<RootLayout>
 									<UsersManagement />
 									</RootLayout>
@@ -155,7 +155,7 @@ export const globalRoutes = [
 						path: "detail/:id?",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="users.view">
 									<RootLayout>
 									<UserDetail />
 									</RootLayout>
@@ -172,7 +172,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="offices.view">
 									<RootLayout>
 									<OfficesManagement />
 									</RootLayout>
@@ -184,7 +184,7 @@ export const globalRoutes = [
 						path: "detail/:id?",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="offices.view">
 									<RootLayout>
 									<OfficeDetail />
 									</RootLayout>
@@ -201,7 +201,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="divisions.view">
 									<RootLayout>
 									<DivisionsManagement />
 									</RootLayout>
@@ -213,7 +213,7 @@ export const globalRoutes = [
 						path: "detail/:id?",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="divisions.view">
 									<RootLayout>
 									<DivisionDetail />
 									</RootLayout>
@@ -230,7 +230,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="operations.view">
 									<RootLayout>
 										<OperationBlueprintsManagement />
 									</RootLayout>
@@ -242,7 +242,7 @@ export const globalRoutes = [
 						path: "detail",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="operations.view">
 									<RootLayout>
 										<OperationBlueprintDetailPage />
 									</RootLayout>
@@ -259,7 +259,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="operations.view">
 									<RootLayout>
 										<MyWorkspaceManagement />
 									</RootLayout>
@@ -271,7 +271,7 @@ export const globalRoutes = [
 						path: "new",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="operations.view">
 									<RootLayout>
 										<MyWorkspaceNewInstance />
 									</RootLayout>
@@ -283,7 +283,7 @@ export const globalRoutes = [
 						path: "detail/:id",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="operations.view">
 									<RootLayout>
 										<MyWorkspaceDetail />
 									</RootLayout>
@@ -300,7 +300,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="templates.view">
 									<RootLayout>
 									<TemplatesManagement />
 									</RootLayout>
@@ -312,7 +312,7 @@ export const globalRoutes = [
 						path: "builder",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="templates.view">
 									<RootLayout>
 									<TemplateDetail />
 									</RootLayout>
@@ -324,7 +324,7 @@ export const globalRoutes = [
 						path: "export-layout/:templateId/:versionId",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="templates.view">
 									<RootLayout>
 									<ExportLayoutPage />
 									</RootLayout>
@@ -336,7 +336,7 @@ export const globalRoutes = [
 						path: "field-mappings/:templateId/:versionId",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute>
+								<ProtectedRoute permissions="templates.view">
 									<RootLayout>
 									<FieldMappingsPage />
 									</RootLayout>
@@ -350,7 +350,7 @@ export const globalRoutes = [
 				path: "roles",
 				element: (
 					<Suspense fallback={<Loading />}>
-						<ProtectedRoute>
+						<ProtectedRoute permissions="roles_permissions.view">
 							<RootLayout>
 								<RolesPermissionsManagement />
 							</RootLayout>

@@ -123,7 +123,7 @@ const TableCellInput = ({ colType, value, onChange, disabled }: { colType: strin
 		case 'DATE':
 			return (
 				<DatePicker
-					className="!w-full !h-8 !rounded-md !border-black/10 !font-[Lato-Regular] !text-sm hover:!border-[#FFBF00]/50"
+					className="w-full! h-8! rounded-md! border-black/10! font-[Lato-Regular]! text-sm! hover:border-[#FFBF00]/50!"
 					placeholder="Select date"
 					format="DD-MM-YYYY"
 					value={value ? dayjs(value) : null}
@@ -134,7 +134,7 @@ const TableCellInput = ({ colType, value, onChange, disabled }: { colType: strin
 		case 'DATE_TIME':
 			return (
 				<DatePicker
-					className="!w-full !h-8 !rounded-md !border-black/10 !font-[Lato-Regular] !text-sm hover:!border-[#FFBF00]/50"
+					className="w-full! h-8! rounded-md! border-black/10! font-[Lato-Regular]! text-sm! hover:border-[#FFBF00]/50!"
 					showTime={{ format: 'HH:mm' }}
 					placeholder="Select date & time"
 					format="DD-MM-YYYY HH:mm"

@@ -19,6 +19,7 @@ import {
     useToast
 } from '../../../shared/hooks/useToast';
 import Button from '../../../shared/components/button';
+import PermissionGate from '../../../shared/components/permission-gate';
 
 interface PropTypes {
     operationId: number;
@@ -81,19 +82,21 @@ const OperationBlueprintHeader = (props: PropTypes): ReactElement => {
                         Save Draft
                     </Button>
                     { operationId &&
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button onClick={handleSaveDraft} className="h-9.5 px-1.5 bg-secondary text-secondary-foreground border border-border/60 border-l-border/30 rounded-r-sm hover:bg-secondary/70 transition-colors cursor-pointer flex items-center">
-                                    <ChevronDown className="w-3.5 h-3.5 text-black/40" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48 rounded-xl">
-                                <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2 text-destructive focus:text-destructive" onClick={handleDeletion}>
-                                    <Trash2Icon className="w-4 h-4" />
-                                    Delete Operation
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <PermissionGate permissions="operations.permanent_delete">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button onClick={handleSaveDraft} className="h-9.5 px-1.5 bg-secondary text-secondary-foreground border border-border/60 border-l-border/30 rounded-r-sm hover:bg-secondary/70 transition-colors cursor-pointer flex items-center">
+                                        <ChevronDown className="w-3.5 h-3.5 text-black/40" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                                    <DropdownMenuItem className="rounded-lg cursor-pointer p-2.5 gap-2 text-destructive focus:text-destructive" onClick={handleDeletion}>
+                                        <Trash2Icon className="w-4 h-4" />
+                                        Delete Operation
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </PermissionGate>
                     }
                 </div>
             </div>

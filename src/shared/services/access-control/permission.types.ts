@@ -31,10 +31,12 @@ export interface AuthenticatedUser {
     avatar?: string;
     firstName: string;
     lastName: string;
+    email: string;
     role: {
         id: number;
         name: string;
         type: string;
+        code: string;
         permissions: PermissionStructure;
     };
 }

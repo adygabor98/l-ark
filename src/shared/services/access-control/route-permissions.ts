@@ -26,7 +26,44 @@ export interface RoutePermissionConfig {
 export const ROUTE_PERMISSIONS: Record<string, RoutePermissionConfig> = {
     // Public routes
     '/': { isPublic: true },
-    '/invite/:id/:date': { isPublic: true }
+    '/invite/:id/:date': { isPublic: true },
+
+    // Authenticated-only (no specific permission needed)
+    '/dashboard': {},
+    '/settings': {},
+
+    // Agenda — any of the three view scopes grants access
+    '/agenda': { permissions: ['agenda.view_all', 'agenda.view_mine_and_sub', 'agenda.view_mine'] },
+
+    // Users
+    '/users': { permissions: 'users.view' },
+    '/users/detail/:id': { permissions: 'users.view' },
+
+    // Offices
+    '/offices': { permissions: 'offices.view' },
+    '/offices/detail/:id': { permissions: 'offices.view' },
+
+    // Divisions
+    '/divisions': { permissions: 'divisions.view' },
+    '/divisions/detail/:id': { permissions: 'divisions.view' },
+
+    // Operations blueprints
+    '/operations': { permissions: 'operations.view' },
+    '/operations/detail': { permissions: 'operations.view' },
+
+    // Workspace (operation instances)
+    '/workspace': { permissions: 'operations.view' },
+    '/workspace/new': { permissions: 'operations.view' },
+    '/workspace/detail/:id': { permissions: 'operations.view' },
+
+    // Templates
+    '/templates': { permissions: 'templates.view' },
+    '/templates/builder': { permissions: 'templates.view' },
+    '/templates/export-layout/:templateId/:versionId': { permissions: 'templates.view' },
+    '/templates/field-mappings/:templateId/:versionId': { permissions: 'templates.view' },
+
+    // Roles & permissions management
+    '/roles': { permissions: 'roles_permissions.view' },
 };
 
 /**

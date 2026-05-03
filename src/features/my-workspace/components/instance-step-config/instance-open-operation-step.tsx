@@ -18,10 +18,12 @@ import {
 } from '../../../../server/hooks/useOperationInstance';
 import Button from '../../../../shared/components/button';
 import {
-    OperationType
+    OperationType,
+    UserRole
 } from '@l-ark/types';
 import LaunchOperationDialog from '../launch-operation-dialog/launch-operation-dialog';
 import SharedDocumentsPanel from '../shared-documents-panel';
+import usePermissions from '../../../../shared/hooks/usePermissions';
 
 interface PropTypes {
     isReadOnly: boolean;
@@ -31,35 +33,27 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
     const { isReadOnly } = props;
     const [loading, setLoading] = useState<boolean>(false);
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-
-    const { instance, blueprint, linkedGlobalInstances, linkedOtherInstances, selectedStepInstance, selectedBlueprintStep, dependsOnLinks } = useWorkspaceInstanceContext();
+    const { user } = usePermissions();
+    const { instance, blueprint, linkedGlobalInstances, linkedOtherInstances, selectedStepInstance, selectedBlueprintStep, dependsOnLinks, refreshInstance } = useWorkspaceInstanceContext();
     const { executeOpenOperationStep } = useOperationInstance();
     const navigate = useNavigate();
 
     const openBlueprints = (selectedBlueprintStep?.openBlueprints ?? []) as unknown as { id: number; title: string; subType?: string; description?: string }[];
     const stillAvailableInstances = blueprint?.type === OperationType.GLOBAL || (
         blueprint?.type === OperationType.OTHER &&
-        dependsOnLinks.length > 0 ||
         (
             !blueprint?.maxGlobalOperations ||
             (
                 blueprint?.maxGlobalOperations - (
                     (dependsOnLinks.length ?? 0) +
-                    (linkedGlobalInstances.length ?? 0) +
-                    (linkedOtherInstances.length ?? 0)
+                    (linkedGlobalInstances.length ?? 0)
                 )
             ) > 0
         )
     );
 
-    const handleLaunch = async (payload: {
-        blueprintId: number;
-        title: string;
-        description: string;
-        sharedFormInstanceIds: number[];
-        sharedDocumentIds: number[];
-    }): Promise<void> => {
-        if (!selectedStepInstance) return;
+    const handleLaunch = async (payload: {blueprintId: number; title: string; description: string; sharedFormInstanceIds: number[]; sharedDocumentIds: number[];}): Promise<void> => {
+        if ( !selectedStepInstance ) return;
         setLoading(true);
         try {
             const response = await executeOpenOperationStep({
@@ -74,8 +68,10 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
             });
             const newInstanceId = response?.data?.data?.entityId;
             setDialogOpen(false);
-            if (newInstanceId != null) {
+            if (newInstanceId != null && user?.role.code !== UserRole.C) {
                 navigate(`/workspace/detail/${newInstanceId}`);
+            } else {
+                refreshInstance();
             }
         } finally {
             setLoading(false);
