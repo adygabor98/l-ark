@@ -24,7 +24,7 @@ interface PropTypes {
 
 	setViewMode: Dispatch<SetStateAction<AgendaViewMode>>;
 	setCurrentDate: Dispatch<SetStateAction<Date>>;
-	setShowAppointment: Dispatch<SetStateAction<boolean>>;
+	setShowAppointment: Dispatch<SetStateAction<number | null | { date: string, startTime: string, endTime: string }>>;
 }
 
 const AgendaHeader = (props: PropTypes): ReactElement => {
@@ -93,7 +93,7 @@ const AgendaHeader = (props: PropTypes): ReactElement => {
 					</Button>
 				</div>
 
-				<Button variant="primary" size="md" onClick={() => setShowAppointment(true)}>
+				<Button variant="primary" size="md" onClick={() => setShowAppointment(-1)}>
 					<Plus className="w-4 h-4 mr-1" />
 					New Event
 				</Button>

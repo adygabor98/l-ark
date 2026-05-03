@@ -98,7 +98,15 @@ const StepRenderers = ({ blueprintStep, instance, isReadOnly }: StepRenderersPro
 
             {!isKnownType && <UnknownStepFallback stepType={String(stepType)} />}
 
-            {showInstanceLink && <InstanceAllowInstanceLinkStep />}
+            {showInstanceLink && (
+                <InstanceAllowInstanceLinkStep
+                    allowLinkBlueprintIds={
+                        (blueprintStep.allowInstanceLinkBlueprints ?? [])
+                            .map((b: any) => b.blueprint?.id ?? b.blueprintId)
+                            .filter((id: number) => id != null)
+                    }
+                />
+            )}
 
             {showDocuments && (
                 <InstanceUploadDocumentsStep

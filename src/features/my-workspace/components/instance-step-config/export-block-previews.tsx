@@ -440,6 +440,8 @@ export const BlockPreview = ({ block, fieldValues, tokens, extensions }: { block
 			return <FormGridPreview block={block} fieldValues={fieldValues} tokens={tokens} />;
 		case "FIELD_GRID":
 			return <FieldGridPreview block={block} fieldValues={fieldValues} tokens={tokens} />;
+		case "SIGNATURE":
+			return <SignaturePreview block={block} fieldValues={fieldValues} tokens={tokens} />;
 		case "BLANK":
 			return null;
 		default:

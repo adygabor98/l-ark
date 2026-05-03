@@ -1,325 +1,199 @@
-import React, { useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { useAgendaStore } from '../store';
-import { EMPLOYEES } from '../mock-data';
-import { snapTime, timeToMinutes } from '../utils';
-import type { Employee } from '../types';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+	useEffect,
+	useState,
+	type Dispatch,
+	type SetStateAction
+} from 'react';
+import {
+	useForm
+} from 'react-hook-form';
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogFooter,
 } from '../../../shared/components/dialog';
+import {
+	format,
+	parse,
+	parseISO
+} from 'date-fns';
+import {
+	useAgenda
+} from '../../../server/hooks/useAgenda';
+import type {
+	FetchResult
+} from '@apollo/client';
+import type {
+	ApiResponse,
+	Appointment
+} from '@l-ark/types';
+import {
+	useToast
+} from '../../../shared/hooks/useToast';
+import {
+	getResponseMessage
+} from '../../../server/hooks/useApolloWithToast';
+import Field from '../../../shared/components/field';
+import usePermissions from '../../../shared/hooks/usePermissions';
 import Button from '../../../shared/components/button';
 
-// ── Form shape ──────────────────────────────────────────────
-interface AppointmentFormValues {
-  name: string;
-  description: string;
-  employeeIds: string[];
-  date: string;
-  startTime: string;
-  endTime: string;
-}
-
-const EMPTY_FORM: AppointmentFormValues = {
-  name: '',
-  description: '',
-  employeeIds: [],
-  date: '',
-  startTime: '09:00',
-  endTime: '10:00',
+const EMPTY_FORM = {
+	name: '',
+	description: '',
+	employeeIds: [],
+	date: '',
+	startTime: '09:00',
+	endTime: '10:00',
 };
 
-// ── Styled form field wrapper ───────────────────────────────
-const FormField: React.FC<{
-  label: string;
-  error?: string;
-  children: React.ReactNode;
-  className?: string;
-}> = ({ label, error, children, className }) => (
-  <div className={`flex flex-col gap-1.5 ${className ?? ''}`}>
-    <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest">
-      {label}
-    </label>
-    {children}
-    {error && (
-      <p className="text-red-400 text-xs font-[Lato-Regular]">{error}</p>
-    )}
-  </div>
-);
+interface PropTypes {
+	id: number | null | { date: string, startTime: string, endTime: string };
+	open: boolean;
 
-const inputClass =
-  'w-full py-2 px-3 text-sm font-[Lato-Regular] border border-border/50 bg-secondary/50 rounded-md shadow-sm transition-all focus:outline-none focus:bg-background focus:border-primary/30';
+	setOpen: Dispatch<SetStateAction<number | null | { date: string, startTime: string, endTime: string }>>;
+}
+export const AppointmentModal = (props: PropTypes) => {
+	/** Retrieve component properties */
+	const { id, open, setOpen } = props;
+	/** Permissions api utilities */
+	const { user } = usePermissions();
+	/** Agenda api utilities */
+	const { retrieveAppointmentById, createAppointment, updateAppointment, deleteAppointment } = useAgenda();
+	/** State to manage the loading */
+	const [loading, setLoading] = useState<boolean>(false);
+	/** Toast utilities */
+	const { onToast } = useToast();
+	/** Formulary definition */
+	const { control, handleSubmit, reset } = useForm<any>({ defaultValues: EMPTY_FORM });
+	/** State to manage the edition state */
+	const isEditing = id && id !== -1 && typeof id !== 'object';
 
-// ── Modal ───────────────────────────────────────────────────
-export const AppointmentModal: React.FC = () => {
-  const {
-    modalOpen,
-    selectedAppointment,
-    closeModal,
-    addAppointment,
-    updateAppointment,
-    deleteAppointment,
-  } = useAgendaStore();
+	useEffect(() => {
+		if ( isEditing ) {
+			const initialize = async (): Promise<void> => {
+				const response: FetchResult<{ data: Appointment }> = await retrieveAppointmentById({ id: id.toString() });
+				if( response.data?.data ) {
 
-  const isEditing =
-    selectedAppointment !== null && selectedAppointment.id !== '';
+					reset({
+						name: response.data.data.name,
+						description: response.data.data.description ?? '',
+						employeeIds: response.data.data.users.map(user => user.user.id),
+						date: format(response.data.data.startAt, 'yyyy-MM-dd'),
+						startTime: format(response.data.data.startAt, 'HH:mm'),
+						endTime: format(response.data.data.endAt, 'HH:mm')
+					})
+				}
+			}
+			initialize();
+		} else {
+			const today = new Date();
+			const y = today.getFullYear();
+			const m = String(today.getMonth() + 1).padStart(2, '0');
+			const d = String(today.getDate()).padStart(2, '0');
+			
+			reset({
+				...EMPTY_FORM,
+				date: typeof id === 'object' ? id?.date : `${y}-${m}-${d}`,
+				startTime: typeof id === 'object' ? id?.startTime : '09:00',
+				endTime: typeof id === 'object' ? id?.endTime : '10:00',
+				
+			});
+		}
+	}, [id, reset]);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    watch,
-    setError,
-    clearErrors,
-    formState: { errors },
-  } = useForm<AppointmentFormValues>({
-    defaultValues: EMPTY_FORM,
-  });
+	/** Manage to create/update an appointment */
+	const onSubmit = async (data: any): Promise<void> => {
+		setLoading(true);
 
-  // Reset form when modal opens
-  useEffect(() => {
-    if (modalOpen) {
-      if (selectedAppointment) {
-        const { id: _id, ...rest } = selectedAppointment;
-        reset(rest);
-      } else {
-        const today = new Date();
-        const y = today.getFullYear();
-        const m = String(today.getMonth() + 1).padStart(2, '0');
-        const d = String(today.getDate()).padStart(2, '0');
-        reset({ ...EMPTY_FORM, date: `${y}-${m}-${d}` });
-      }
-    }
-  }, [modalOpen, selectedAppointment, reset]);
+		const localDate = format(parseISO(data.date), "yyyy-MM-dd");
 
-  const onSubmit = (data: AppointmentFormValues) => {
-    // Validate employees (not a standard Controller field)
-    if (data.employeeIds.length === 0) {
-      setError('employeeIds', { message: 'Select at least one employee' });
-      return;
-    }
+		const form = {
+			name: data.name,
+			description: data.description,
+			startAt: parse(`${localDate} ${data.startTime}`, "yyyy-MM-dd HH:mm", new Date()),
+			endAt: parse(`${localDate} ${data.endTime}`, "yyyy-MM-dd HH:mm", new Date()),
+			employeeIds: data.employeeIds
+		}
 
-    const snapped = {
-      ...data,
-      startTime: snapTime(data.startTime),
-      endTime: snapTime(data.endTime),
-    };
+		try {
+			if( isEditing ) {
+				const response: FetchResult<{ data: ApiResponse }> = await updateAppointment({ id: id, input: form });
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
+			} else {
+				const response: FetchResult<{ data: ApiResponse }> = await createAppointment({ input: form });
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
+			}
+			setLoading(false);
+			setOpen(null);
+		} catch( e: any ) {
+			console.error(e);
+			setLoading(false);
 
-    if (isEditing) {
-      updateAppointment(selectedAppointment!.id, snapped);
-    } else {
-      addAppointment(snapped);
-    }
-    closeModal();
-  };
+		}
+	};
 
-  const handleDelete = () => {
-    if (isEditing) {
-      deleteAppointment(selectedAppointment!.id);
-      closeModal();
-    }
-  };
+	/** Manage to delete an appointment */
+	const handleDelete = async (): Promise<void> => {
+		try {
+			if ( isEditing ) {
+				setLoading(true);
+				const response: FetchResult<{ data: ApiResponse }> = await deleteAppointment({ id });
+				onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
+				setOpen(null);
+			}
+		} catch( e: any ) {
+			setLoading(false);
+			console.error(e);
+		} 
+	};
 
-  return (
-    <Dialog
-      open={modalOpen}
-      onOpenChange={(open) => {
-        if (!open) closeModal();
-      }}
-    >
-      <DialogContent className="max-w-md! p-6!">
-        <DialogHeader>
-          <DialogTitle>
-            {isEditing ? 'Edit Appointment' : 'New Appointment'}
-          </DialogTitle>
-        </DialogHeader>
+	return (
+		<Dialog open={open} onOpenChange={() => setOpen(null)}>
+            <DialogContent className="top-1/2! sm:max-w-225 overflow-visible border-none rounded-2xl shadow-2xl">
+				<div className="p-6 space-y-5">
+					<DialogHeader>
+						<DialogTitle>
+							{ isEditing ? 'Edit Appointment' : 'New Appointment' }
+						</DialogTitle>
+					</DialogHeader>
+					<div className='flex flex-col gap-4'>
+						{/* Name */}
+						<Field control={control} name='name' label={ 'Name' } type='text' placeholder={ 'Assessorament X' } required />
 
-        <form
-          onSubmit={(e) => { clearErrors(); handleSubmit(onSubmit)(e); }}
-          className="flex flex-col gap-4 mt-2"
-        >
-          {/* Name */}
-          <Controller
-            name="name"
-            control={control}
-            rules={{ required: 'Name is required' }}
-            render={({ field }) => (
-              <FormField label="Name" error={errors.name?.message}>
-                <input
-                  {...field}
-                  className={inputClass}
-                  placeholder="Meeting name"
-                  autoFocus
-                />
-              </FormField>
-            )}
-          />
+						{/* Description */}
+						<Field control={control} name='description' label={ 'Description' } type='textarea' placeholder={ 'Optional description...' } />
 
-          {/* Description */}
-          <Controller
-            name="description"
-            control={control}
-            render={({ field }) => (
-              <FormField label="Description">
-                <textarea
-                  {...field}
-                  className={`${inputClass} resize-vertical`}
-                  placeholder="Optional description..."
-                  rows={2}
-                />
-              </FormField>
-            )}
-          />
+						{/* Date */}
+						<Field control={control} name='date' label={ 'Date' } type='date' placeholder={ 'dd-MM-yyyy' } required />
 
-          {/* Date */}
-          <Controller
-            name="date"
-            control={control}
-            rules={{ required: 'Date is required' }}
-            render={({ field }) => (
-              <FormField label="Date" error={errors.date?.message}>
-                <input {...field} type="date" className={inputClass} />
-              </FormField>
-            )}
-          />
+						{/* Start + End time */}
+						<div className="flex gap-3">
+							<Field control={control} name='startTime' label={ 'Start at' } type='time' placeholder={ 'HH:MM' } required />
+							<Field control={control} name='endTime' label={ 'End at' } type='time' placeholder={ 'HH:MM' } required />
+						</div>
 
-          {/* Start + End time */}
-          <div className="flex gap-3">
-            <Controller
-              name="startTime"
-              control={control}
-              rules={{ required: 'Required' }}
-              render={({ field }) => (
-                <FormField
-                  label="Start Time"
-                  error={errors.startTime?.message}
-                  className="flex-1"
-                >
-                  <input
-                    {...field}
-                    type="time"
-                    step="900"
-                    className={inputClass}
-                  />
-                </FormField>
-              )}
-            />
-            <Controller
-              name="endTime"
-              control={control}
-              rules={{
-                required: 'Required',
-                validate: (value) => {
-                  const start = watch('startTime');
-                  if (start && timeToMinutes(value) <= timeToMinutes(start)) {
-                    return 'Must be after start';
-                  }
-                  return true;
-                },
-              }}
-              render={({ field }) => (
-                <FormField
-                  label="End Time"
-                  error={errors.endTime?.message}
-                  className="flex-1"
-                >
-                  <input
-                    {...field}
-                    type="time"
-                    step="900"
-                    className={inputClass}
-                  />
-                </FormField>
-              )}
-            />
-          </div>
+						{/* Date */}
+						<Field control={control} name='employeeIds' label={ 'Employees' } type='select' dataType='users' params={{ sourceUser: user?.id }} multiple placeholder={ 'Select all the employees involved' } required />
+					</div>
 
-          {/* Employees */}
-          <Controller
-            name="employeeIds"
-            control={control}
-            render={({ field }) => {
-              const selected = field.value as string[];
-
-              const toggle = (empId: string) => {
-                const next = selected.includes(empId)
-                  ? selected.filter((id) => id !== empId)
-                  : [...selected, empId];
-                field.onChange(next);
-                if (next.length > 0) clearErrors('employeeIds');
-              };
-
-              return (
-                <FormField
-                  label="Employees"
-                  error={errors.employeeIds?.message}
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    {EMPLOYEES.map((emp: Employee) => {
-                      const isSelected = selected.includes(emp.id);
-                      return (
-                        <button
-                          key={emp.id}
-                          type="button"
-                          onClick={() => toggle(emp.id)}
-                          className={`
-                            inline-flex items-center gap-1.5 px-3 py-1.5
-                            border rounded-full text-xs font-[Lato-Regular]
-                            cursor-pointer transition-all duration-150
-                            ${
-                              isSelected
-                                ? 'border-current shadow-sm'
-                                : 'border-border/50 bg-secondary/50 hover:border-black/20'
-                            }
-                          `}
-                          style={
-                            isSelected
-                              ? {
-                                  borderColor: emp.color,
-                                  backgroundColor: `${emp.color}14`,
-                                  color: emp.color,
-                                }
-                              : undefined
-                          }
-                        >
-                          <span
-                            className="w-[7px] h-[7px] rounded-full shrink-0"
-                            style={{ background: emp.color }}
-                          />
-                          {emp.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </FormField>
-              );
-            }}
-          />
-
-          {/* Actions */}
-          <DialogFooter className="pt-3 border-t border-border/30 mt-1 gap-2!">
-            {isEditing && (
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={handleDelete}
-                className="mr-auto!"
-              >
-                Delete
-              </Button>
-            )}
-            <Button variant="secondary" size="sm" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" htmlType="submit">
-              {isEditing ? 'Save Changes' : 'Create'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
+					{/* Actions */}
+					<DialogFooter className="pt-3 border-t border-border/30 mt-1 gap-2!">
+						{ isEditing &&
+							<Button variant="danger" size="md" onClick={handleDelete} className="mr-auto!">
+								{ loading ? 'Deleting...' : 'Delete' }
+							</Button>
+						}
+						<Button variant="secondary" size="md" onClick={() => setOpen(null)}>
+							Cancel
+						</Button>
+						<Button variant="primary" size="md" onClick={handleSubmit(onSubmit)}>
+							{ loading ? 'Saving...' : id ? 'Save Changes' : 'Create' }
+						</Button>
+					</DialogFooter>
+				</div>
+            </DialogContent>
+        </Dialog>
+	);
 };

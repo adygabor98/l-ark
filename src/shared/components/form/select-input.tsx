@@ -29,7 +29,9 @@ import {
     ConditionalVisibility,
     StepType
 } from '@l-ark/types';
-import { RETRIEVE_OPERATION_BLUEPRINTS } from "../../../server/api/operation/operation-blueprint.queries";
+import {
+    RETRIEVE_OPERATION_BLUEPRINTS
+} from "../../../server/api/operation/operation-blueprint.queries";
 
 const { Option } = Select;
 

@@ -55,6 +55,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
     /** Targeted watches — only re-render the panel for fields that drive conditional UI */
     const stepType = watch('stepType');
     const allowDocumentUpload = watch('allowDocumentUpload');
+    const allowInstanceLink = watch('allowInstanceLink');
     /** Creating file template map for fast access on information */
     const templateMap = useMemo(() => {
         const map = new Map<string, FileTemplateSummary>();
@@ -72,10 +73,13 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 
     useEffect(() => {
         reset(step);
+    }, [step, reset]);
+
+    useEffect(() => {
         if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = 0;
         }
-    }, [step, reset]);
+    }, [step.id]);
 
     useEffect(() => {
         setValue('fileTemplateConfigs', step.fileTemplateConfigs);
@@ -90,7 +94,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                 const {
                     title, description, stepType, waitForLinkedType, openBlueprintIds,
                     notificationPersons, conditionalVisibility, isBlocking, isRequired,
-                    allowDocumentUpload, allowInstanceLink, expectedDocuments
+                    allowDocumentUpload, allowInstanceLink, allowInstanceLinkBlueprintIds, expectedDocuments
                 } = values;
                 onUpdate(step.id, {
                     title,
@@ -104,6 +108,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                     isRequired,
                     allowDocumentUpload,
                     allowInstanceLink,
+                    allowInstanceLinkBlueprintIds,
                     expectedDocuments
                 });
             }, 250);
@@ -318,6 +323,16 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 				}
 
                 <Field control={control} name='allowInstanceLink' label={ 'Allow Instance Link' } type='toggle-switch' placeholder="User can choose to link this step to an existing instance or proceed without linking" />
+
+                { allowInstanceLink &&
+                    <div className="flex flex-col gap-2 p-3 rounded-xl bg-blue-50/50 border border-blue-200/60">
+                        <div className="flex items-center gap-2 mb-1">
+                            <label className="text-[11px] font-[Lato-Bold] text-blue-700 uppercase tracking-widest"> Allowed Operation Types </label>
+                        </div>
+                        <Field control={control} name='allowInstanceLinkBlueprintIds' type='select' dataType='blueprints' multiple />
+                        <p className="text-[10px] font-[Lato-Regular] text-blue-600/70"> Leave empty to allow all operation types </p>
+                    </div>
+                }
 			</div>
 
 			{/* Footer */}

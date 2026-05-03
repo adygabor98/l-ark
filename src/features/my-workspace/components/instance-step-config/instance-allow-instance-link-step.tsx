@@ -30,7 +30,11 @@ import SharedDocumentsPanel from '../shared-documents-panel';
 import Button from '../../../../shared/components/button';
 import { getResponseMessage } from '../../../../server/hooks/useApolloWithToast';
 
-const InstanceAllowInstanceLinkStep = (): ReactElement => {
+interface Props {
+    allowLinkBlueprintIds: number[];
+}
+
+const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactElement => {
     /** My workspace instance utilities */
     const { instance, blueprint, linkableOtherInstances, refreshInstance } = useWorkspaceInstanceContext();
     /** Operation instance api utilities */
@@ -55,12 +59,18 @@ const InstanceAllowInstanceLinkStep = (): ReactElement => {
     /** Manage to refresh the available list of the operations */
     const refreshListOfAvailableOperations = (): void => {
         const alreadyLinkedIds = (instance.sourceLinks ?? []).map(link => link.targetInstance.id);
-        setOtherOperationsAvailable(linkableOtherInstances.filter(linkable => !alreadyLinkedIds.includes(linkable.id) ))
+        setOtherOperationsAvailable(
+            linkableOtherInstances.filter(linkable => {
+                if (alreadyLinkedIds.includes(linkable.id)) return false;
+                if (allowLinkBlueprintIds.length > 0 && !allowLinkBlueprintIds.includes(linkable.blueprintId)) return false;
+                return true;
+            })
+        );
     }
     
     useEffect(() => {
         refreshListOfAvailableOperations();
-    }, [])
+    }, [allowLinkBlueprintIds])
     
     /** Manage to check if the blueprintId is not a pre-requisite of the current global operation */
     const isPrerequisite = (blueprintId: number) => {

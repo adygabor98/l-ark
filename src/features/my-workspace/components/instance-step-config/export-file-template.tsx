@@ -32,7 +32,8 @@ import {
     useExportPagination
 } from '../../hooks/useExportPagination';
 import {
-    PAGE_DIMS
+    PAGE_DIMS,
+    PX_PER_MM
 } from '../../../templates/export-layout/export-layout.constants';
 import {
     FooterBand,
@@ -76,7 +77,14 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
     /** State to manage the form fields */
     const [fieldValues, setFieldValues] = useState<Map<string, unknown>>(new Map());
     /** Export pagination utilities */
-    const { pages, totalPages } = useExportPagination({ rows, pageConfig, loading });
+    const {
+        pages,
+        totalPages,
+        contentRows,
+        rowMeasureRef,
+        headerMeasureRef,
+        footerMeasureRef
+    } = useExportPagination({ rows, pageConfig, loading });
     const zoneExtensions = useMemo(() => buildZoneExtensions(fieldValues, tokens), [fieldValues, tokens]);
     const extensions = useMemo(() => buildPreviewExtensions(fieldValues, tokens), [fieldValues, tokens]);
 
@@ -235,7 +243,12 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
                 <div className="flex-1 flex flex-col gap-3 overflow-hidden" style={{ minHeight: 0 }}>
                     { page.rows.length === 0 ?
                         <p className="text-center text-sm text-black/20 italic py-8"> Empty page </p>
-                    :
+                    : page.yOffset > 0 ? (
+                        /* Continuation slice: render the same oversized row(s) shifted up by yOffset */
+                        <div style={{ marginTop: -page.yOffset }}>
+                            { page.rows.map(row => <RowPreview key={row.id} row={row} fieldValues={fieldValues} tokens={tokens} extensions={extensions} /> )}
+                        </div>
+                    ) :
                         page.rows.map(row => <RowPreview key={row.id} row={row} fieldValues={fieldValues} tokens={tokens} extensions={extensions} /> )
                     }
                 </div>
@@ -243,6 +256,35 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
                 <div className="shrink-0">
                     { pageConfig && <FooterBand pageConfig={pageConfig} pageNum={pageIdx + 1} totalPages={totalPages} zoneExtensions={zoneExtensions} /> }
                 </div>
+            </div>
+        </div>
+    );
+
+    /** Width of the page's content area in px (page width minus horizontal margins) */
+    const contentWidth = dims.width - (margins.left + margins.right) * PX_PER_MM;
+
+    /**
+     * Hidden offscreen measurement area. Attaches the three refs so that
+     * `useExportPagination` can read real header/footer/row heights and
+     * paginate accordingly. Without this, every row falls back to ~40px
+     * and oversized rich-text rows collapse onto a single page (causing
+     * middle pages to render empty). Mirrors the designer's preview-mode.
+     */
+    const renderMeasurementArea = (): ReactElement => (
+        <div aria-hidden="true" className="export-measure-area"
+            style={{ position: 'absolute', visibility: 'hidden', pointerEvents: 'none', left: -9999, top: 0 }}>
+            <div ref={headerMeasureRef} style={{ width: contentWidth }}>
+                { pageConfig && <HeaderBand pageConfig={pageConfig} zoneExtensions={zoneExtensions} /> }
+            </div>
+            <div ref={footerMeasureRef} style={{ width: contentWidth }}>
+                { pageConfig && <FooterBand pageConfig={pageConfig} pageNum={1} totalPages={1} zoneExtensions={zoneExtensions} /> }
+            </div>
+            <div ref={rowMeasureRef} style={{ width: contentWidth }}>
+                { contentRows.map(row => (
+                    <div key={row.id}>
+                        <RowPreview row={row} fieldValues={fieldValues} tokens={tokens} extensions={extensions} />
+                    </div>
+                ))}
             </div>
         </div>
     );
@@ -259,6 +301,7 @@ const ExportFileInstance = (props: PropTypes): ReactElement => {
 
             { !loading &&
                 <>
+                    { renderMeasurementArea() }
                     { pages.map((page, pageIdx) => (
                         <div key={pageIdx} className="flex flex-col">
                             <div className="text-xs text-black/30 text-center mb-2 font-[Lato-Regular] select-none">

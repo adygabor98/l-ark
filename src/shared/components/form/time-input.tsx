@@ -12,7 +12,7 @@ const TimeField = (props: PropTypes) => {
         <input
             type="time"
             {...field}
-            className={`w-full rounded-[0.7vw] text-[14px] font-[Lato-Light] pl-3 bg-[#ededed] text-neutral-700 ${small ? 'h-10' : 'h-13'} `}
+            className={`w-full rounded-[0.7vw] text-[14px] font-[Lato-Light] pl-3 bg-transparent text-neutral-700 ${small ? 'h-10' : 'h-13'} `}
         />
     );
 }

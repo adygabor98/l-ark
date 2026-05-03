@@ -99,6 +99,11 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
             }
             conditionalVisibility
             allowInstanceLink
+            allowInstanceLinkBlueprintIds
+            allowInstanceLinkBlueprints {
+                id
+                title
+            }
             notificationPersons
             expectedDocuments
 
@@ -318,6 +323,11 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 }
                 conditionalVisibility
                 allowInstanceLink
+                allowInstanceLinkBlueprintIds
+                allowInstanceLinkBlueprints {
+                    id
+                    title
+                }
                 notificationPersons
                 expectedDocuments
                 position
