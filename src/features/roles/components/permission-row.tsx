@@ -26,17 +26,18 @@ import {
 	TooltipTrigger
 } from '../../../shared/components/tooltip';
 
-const PermissionCheckbox = ({ checked, onChange }: { checked: boolean; onChange: (checked: boolean) => void; }): ReactElement => (
-	<button type="button" role="checkbox" onClick={() => onChange(!checked)}
-		className={`w-4.5 h-4.5 rounded-[4px] border transition-all duration-150 cursor-pointer flex items-center justify-center shrink-0
+const PermissionCheckbox = ({ checked, onChange, disabled = false }: { checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean; }): ReactElement => (
+	<button type="button" role="checkbox" disabled={disabled} onClick={() => !disabled && onChange(!checked)}
+		className={`w-4.5 h-4.5 rounded-[4px] border transition-all duration-150 flex items-center justify-center shrink-0
 			${ checked ? 'bg-primary border-primary' : 'bg-white border-black/20 hover:border-black/40'}
+			${ disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
 		`}
 	>
 		{ checked && <Check className="w-3 h-3 text-primary-foreground" strokeWidth={3} /> }
 	</button>
 );
 
-const PermissionRow = React.memo(({ permission, roles }: { permission: Permission; roles: Array<Role>; }): ReactElement => {
+const PermissionRow = React.memo(({ permission, roles, canEdit = true }: { permission: Permission; roles: Array<Role>; canEdit?: boolean; }): ReactElement => {
 	/** Retrieve form utilities */
 	const { control } = useFormContext<RolesFormValues>();
 
@@ -70,6 +71,7 @@ const PermissionRow = React.memo(({ permission, roles }: { permission: Permissio
 							return (
 								<PermissionCheckbox
 									checked={isEnabled}
+									disabled={!canEdit}
 									onChange={(checked) => {
 										field.onChange({
 											...perms,

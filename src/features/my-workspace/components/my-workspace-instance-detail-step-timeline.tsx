@@ -21,6 +21,11 @@ import {
 import {
 	useWorkspaceInstanceContext
 } from '../context/workspace-instance.context';
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger
+} from '../../../shared/components/tooltip';
 
 interface PropTypes {
 	isReadOnly: boolean;
@@ -32,14 +37,24 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
     const { isReadOnly, progress } = props;
     /** Operation Instance api utilities (shared via context) */
     const { instance, blueprint, visibleStepInstances, selectedStepInstanceId, launchedFromInstance, setSelectedStepInstanceId } = useWorkspaceInstanceContext();
+	/** Mini progress percentage shown at the top of the timeline */
+	const progressPct = progress.total > 0 ? (progress.completed / progress.total) * 100 : 0;
+	const allCompleted = progress.total > 0 && progress.completed === progress.total;
 
 	return (
-        <div className="w-68 shrink-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
-			<div className="px-4 py-3 border-b border-black/6 flex items-center justify-between">
-				<h3 className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Steps </h3>
-				<span className="text-[10px] font-[Lato-Regular] text-black/30">
-					{ progress.completed}/{progress.total }
-				</span>
+        <aside aria-label="Steps" className="w-64 xl:w-72 shrink-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
+			<div className="sticky top-0 z-10 bg-white border-b border-black/6">
+				<div className="px-4 py-3 flex items-center justify-between">
+					<h3 className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Steps </h3>
+					<span className="text-[10px] font-[Lato-Regular] text-black/30">
+						{ progress.completed}/{progress.total }
+					</span>
+				</div>
+				<div className="h-1 bg-black/5 overflow-hidden">
+					<div style={{ width: `${progressPct}%` }}
+						className={`h-full transition-all duration-500 ${ allCompleted ? "bg-emerald-500" : "bg-linear-to-r from-[#FFBF00] to-[#D4AF37]" }`}
+					/>
+				</div>
 			</div>
 
 			{ launchedFromInstance &&
@@ -74,23 +89,29 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
 
 						return (
 							<div key={si.id} className="relative">
-								{/* Connector line */}
-								{ !isLast && <div className={`absolute left-4.25 top-8 w-px h-2 ${isCompleted ? "bg-emerald-200" : "bg-black/6"}`} /> }
+								{/* Connector line — visually links consecutive step icons */}
+								{ !isLast && <div className={`absolute left-[17px] top-7 w-px h-3 ${isCompleted ? "bg-emerald-200" : "bg-black/6"}`} /> }
 
 								<button onClick={() => setSelectedStepInstanceId(si.id)}
 									className={`w-full text-left rounded-xl px-2.5 py-2 transition-all duration-150 cursor-pointer group ${
-										isSelected ? "bg-amber-50/80 ring-1 ring-amber-300/60 shadow-sm" : "hover:bg-black/2 hover:ring-1 hover:ring-black/4"
+										isSelected ? "bg-amber-50/80 ring-1 ring-amber-300/60 shadow-sm border-l-2 border-amber-400 pl-2" : "border-l-2 border-transparent hover:bg-black/2 hover:ring-1 hover:ring-black/4"
 									}`}
 								>
 									<div className="flex items-center gap-2.5">
 										<div className="shrink-0">
 											{ isCompleted ?  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                                                 : isSkipped ? <SkipForward className="w-4 h-4 text-slate-300" />
-                                                : isActive ? <PlayCircle className="w-4 h-4 text-amber-500" />
+                                                : isActive ? <PlayCircle className="w-4 h-4 text-amber-500 animate-pulse" />
                                                 : isBlocked ? <Lock className="w-3.5 h-3.5 text-red-300" />
                                                 : <Circle className="w-4 h-4 text-black/15" />
                                             }
 										</div>
+
+										<span className={`text-[11px] font-[Lato-Bold] tabular-nums shrink-0 ${
+											isSelected ? "text-amber-600" : "text-black/30"
+										}`}>
+											{ String(idx + 1).padStart(2, '0') }.
+										</span>
 
 										<span className={`text-[13px] font-[Lato-Bold] truncate flex-1 transition-colors ${
 											isSelected ? "text-black/90" : (isCompleted || isSkipped) ? "text-black/35" : "text-black/65"
@@ -98,7 +119,14 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
 											{ bpStep.title }
 										</span>
 
-										{ bpStep.isRequired && <span className="text-red-400 text-[9px] font-[Lato-Bold] shrink-0"> REQ </span> }
+										{ bpStep.isRequired &&
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<span className="w-1.5 h-1.5 rounded-full bg-red-400 shrink-0" aria-label="Required step" />
+												</TooltipTrigger>
+												<TooltipContent side="right"> Required step </TooltipContent>
+											</Tooltip>
+										}
 									</div>
 								</button>
 							</div>
@@ -106,7 +134,7 @@ const MyWorkspaceInstanceDetailStepTimeline = (props: PropTypes): ReactElement =
 					})}
 				</div>
 			</div>
-		</div>
+		</aside>
     );
 }
 

@@ -139,7 +139,9 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 	const dependsOnLinks: Partial<OperationInstance>[] = useMemo(() => {
 		if ( !instance ) return [];
 
-		return instance.targetLinks.filter(link => link.linkType === LinkType.DEPENDS_ON) as Partial<OperationInstance>[];
+		return instance.targetLinks.filter(link =>
+			link.linkType === LinkType.DEPENDS_ON || link.linkType === LinkType.GLOBAL_OTHER
+		) as Partial<OperationInstance>[];
 	}, [instance?.targetLinks]);
 
 	// Instances eligible to be linked via OTHER_OTHER (for allowInstanceLink steps).

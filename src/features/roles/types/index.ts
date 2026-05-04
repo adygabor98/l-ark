@@ -1,7 +1,6 @@
 
 
 export type Resource =
-	| 'activity_log'
 	| 'roles_permissions'
 	| 'users'
 	| 'offices'

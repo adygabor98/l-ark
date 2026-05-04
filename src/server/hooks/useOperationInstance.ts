@@ -16,7 +16,8 @@ import {
     REMOVE_INSTANCE,
     EXECUTE_OPEN_OPERATION_STEP,
     SELECT_DOCUMENTS_TO_SHARE,
-    MANAGE_SHARED_DOCUMENTS
+    MANAGE_SHARED_DOCUMENTS,
+    CREATE_OPERATION_REQUEST
 } from "../api/operation/operation-instance.mutations";
 import {
     useLazyQueryWithToast,
@@ -52,6 +53,7 @@ interface UseOperationInstanceApiResponse {
     executeOpenOperationStep: (variables: { input: { stepInstanceId: number; selectedBlueprintId?: number; title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => FetchResult<{ data: ApiResponse & { entityId?: string | number } }>;
     selectDocumentsToShare: (variables: { input: { instanceId: string; targetInstanceId: string; documentIds: string[] } }) => FetchResult<{ data: ApiResponse }>;
     manageSharedDocuments: (variables: { input: { instanceLinkId: string | number; addFormInstanceIds?: (string | number)[]; addDocumentIds?: (string | number)[]; revokeIds?: (string | number)[] } }) => FetchResult<{ data: ApiResponse }>;
+    createOperationRequest: (variables: { input: { sourceInstanceId: number; targetBlueprintId: number; officeId: number; message?: string } }) => FetchResult<{ data: ApiResponse }>;
 }
 
 export const useOperationInstance = (): UseOperationInstanceApiResponse => {
@@ -83,6 +85,8 @@ export const useOperationInstance = (): UseOperationInstanceApiResponse => {
     
     /** Execute an OPEN_OPERATION step — creates sub-operation */
     const [executeOpenOperationStep] = useMutationWithToast(EXECUTE_OPEN_OPERATION_STEP, { refetchQueries: ['gqlRetrieveInstanceById'] });
+    /** Submit a global operation request (Commercial → Director approval) */
+    const [createOperationRequest] = useMutationWithToast(CREATE_OPERATION_REQUEST);
     /** Select documents to share on closure */
     const [selectDocumentsToShare] = useMutationWithToast(SELECT_DOCUMENTS_TO_SHARE, { refetchQueries: ['gqlRetrieveInstanceById'] });
     /** Manage (add / revoke) shared documents on an existing InstanceLink */
@@ -111,5 +115,6 @@ export const useOperationInstance = (): UseOperationInstanceApiResponse => {
         executeOpenOperationStep: (variables: { input: { stepInstanceId: number; selectedBlueprintId?: number; title?: string; description?: string; sharedFormInstanceIds?: (string | number)[]; sharedDocumentIds?: (string | number)[] } }) => executeOpenOperationStep({ variables }) as FetchResult<{ data: ApiResponse & { entityId?: string | number } }>,
         selectDocumentsToShare: (variables: { input: { instanceId: string; targetInstanceId: string; documentIds: string[] } }) => selectDocumentsToShare({ variables }) as FetchResult<{ data: ApiResponse }>,
         manageSharedDocuments: (variables: { input: { instanceLinkId: string | number; addFormInstanceIds?: (string | number)[]; addDocumentIds?: (string | number)[]; revokeIds?: (string | number)[] } }) => manageSharedDocuments({ variables }) as FetchResult<{ data: ApiResponse }>,
+        createOperationRequest: (variables: { input: { sourceInstanceId: number; targetBlueprintId: number; officeId: number; message?: string } }) => createOperationRequest({ variables }) as FetchResult<{ data: ApiResponse }>,
     };
 };

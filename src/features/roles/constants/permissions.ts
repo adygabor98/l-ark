@@ -8,7 +8,6 @@ const p = (resource: Resource, action: string, label: string, description: strin
 }
 
 export const RESOURCE_LABELS: Record<Resource, string> = {
-	activity_log: 'Activity Log',
 	roles_permissions: 'Roles & Permissions',
 	users: 'Users',
 	offices: 'Offices',
@@ -19,9 +18,6 @@ export const RESOURCE_LABELS: Record<Resource, string> = {
 };
 
 export const PERMISSIONS: Permission[] = [
-	// Activity Log (1)
-	p('activity_log', 'view', 'View', 'View the system activity log with all recorded actions'),
-
 	// Roles & Permissions (2)
 	p('roles_permissions', 'view', 'View', 'View the Roles & Permissions management page'),
 	p('roles_permissions', 'edit', 'Edit', 'Modify role definitions and toggle permissions on/off'),
@@ -72,7 +68,6 @@ export const PERMISSIONS_MAP = new Map(PERMISSIONS.map((p) => [p.key, p]));
 export const getPermissionsByResource = (resource: Resource): Permission[] => PERMISSIONS.filter((p) => p.resource === resource);
 
 export const RESOURCES: Resource[] = [
-	'activity_log',
 	'roles_permissions',
 	'users',
 	'offices',

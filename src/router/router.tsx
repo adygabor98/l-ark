@@ -49,6 +49,7 @@ import OperationBlueprintDetailPage from "../features/operation-blueprints/opera
 import MyWorkspaceManagement from "../features/my-workspace/my-workspace-management";
 import MyWorkspaceNewInstance from "../features/my-workspace/my-workspace-new-instance";
 import MyWorkspaceDetail from "../features/my-workspace/my-workspace-detail";
+import SharedDocumentsManagement from "../features/shared-documents/shared-documents-management";
 
 // Component to initialize global navigation and token expiration monitoring
 const NavigationInitializer = () => {
@@ -230,7 +231,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute permissions="operations.view">
+								<ProtectedRoute permissions="operations.view" deniedRoles={["ADM"]}>
 									<RootLayout>
 										<OperationBlueprintsManagement />
 									</RootLayout>
@@ -242,7 +243,7 @@ export const globalRoutes = [
 						path: "detail",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute permissions="operations.view">
+								<ProtectedRoute permissions="operations.view" deniedRoles={["ADM"]}>
 									<RootLayout>
 										<OperationBlueprintDetailPage />
 									</RootLayout>
@@ -259,7 +260,7 @@ export const globalRoutes = [
 						path: "",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute permissions="operations.view">
+								<ProtectedRoute permissions="operations.view" deniedRoles={["ADM"]}>
 									<RootLayout>
 										<MyWorkspaceManagement />
 									</RootLayout>
@@ -271,7 +272,7 @@ export const globalRoutes = [
 						path: "new",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute permissions="operations.view">
+								<ProtectedRoute permissions="operations.view" deniedRoles={["ADM"]}>
 									<RootLayout>
 										<MyWorkspaceNewInstance />
 									</RootLayout>
@@ -283,7 +284,7 @@ export const globalRoutes = [
 						path: "detail/:id",
 						element: (
 							<Suspense fallback={<Loading />}>
-								<ProtectedRoute permissions="operations.view">
+								<ProtectedRoute permissions="operations.view" deniedRoles={["ADM"]}>
 									<RootLayout>
 										<MyWorkspaceDetail />
 									</RootLayout>
@@ -292,6 +293,18 @@ export const globalRoutes = [
 						)
 					}
 				]
+			},
+			{
+				path: "shared",
+				element: (
+					<Suspense fallback={<Loading />}>
+						<ProtectedRoute>
+							<RootLayout>
+								<SharedDocumentsManagement />
+							</RootLayout>
+						</ProtectedRoute>
+					</Suspense>
+				)
 			},
 			{
 				path: "templates",

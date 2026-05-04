@@ -1,5 +1,7 @@
 import {
-	type ReactElement
+	type ReactElement,
+	useMemo,
+	useState
 } from "react";
 import {
 	Building2,
@@ -7,9 +9,10 @@ import {
 	Calendar,
 	Link2,
 	ExternalLink,
-	ArrowRight,
 	Globe,
-	FolderCog
+	FolderCog,
+	FileText,
+	MapPin
 } from "lucide-react";
 import {
 	LinkType,
@@ -21,7 +24,9 @@ import {
 import {
 	useWorkspaceInstanceContext
 } from "../context/workspace-instance.context";
-import { INSTANCE_STATUS_COLORS } from "../utils/my-workspace.utils";
+import RightPanelSharedTab from "./right-panel-shared-tab";
+import LinkedOperationRow from "./linked-operation-row";
+import UserChip from "./user-chip";
 
 const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 	/** My workspace utilities */
@@ -32,18 +37,50 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 	const creator = instance?.createdBy;
 	/** Has any links */
 	const hasLinks = linkedGlobalInstances.length > 0 || linkedOtherInstances.length > 0 || launchedFromInstance || (instance?.sourceLinks?.length ?? 0) > 0 || (instance?.targetLinks?.length ?? 0) > 0;
+	/** Active tab in the right context panel */
+	const [activeTab, setActiveTab] = useState<'info' | 'shared'>('info');
+	/** Total number of shared rows visible in the Shared tab (incoming + outgoing). */
+	const sharedCount = useMemo(() => {
+		if (!instance) return 0;
+		let n = 0;
+		for (const l of (instance.sourceLinks ?? []) as any[]) n += (l.sharedDocuments ?? []).length;
+		for (const l of (instance.targetLinks ?? []) as any[]) n += (l.sharedDocuments ?? []).length;
+		return n;
+	}, [instance]);
 
 	if( !instance ) {
 		return <></>;
 	}
 
+	const hasAnyDetails = !!instance.description || !!instance.division || !!instance.office || !!assignee || !!creator || !!instance.createdAt;
+
 	return (
-		<div className="w-72 shrink-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
-			<div className="px-4 py-3 border-b border-black/6">
-				<h3 className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Operation Information </h3>
+		<aside aria-label="Operation context" className="w-64 xl:w-72 shrink-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
+			<div className="flex border-b border-black/6">
+				<button onClick={() => setActiveTab('info')}
+					className={`relative flex-1 px-3 py-2.5 text-[11px] font-[Lato-Bold] uppercase tracking-widest transition-colors cursor-pointer ${ activeTab === 'info' ? 'text-black/70' : 'text-black/35 hover:text-black/55' }`}
+				>
+					Info
+					{ activeTab === 'info' && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-amber-400" /> }
+				</button>
+				<button onClick={() => setActiveTab('shared')}
+					className={`relative flex-1 px-3 py-2.5 text-[11px] font-[Lato-Bold] uppercase tracking-widest transition-colors cursor-pointer flex items-center justify-center gap-1.5 ${ activeTab === 'shared' ? 'text-black/70' : 'text-black/35 hover:text-black/55' }`}
+				>
+					Shared
+					{ sharedCount > 0 &&
+						<span className={`text-[9px] rounded-full px-1.5 py-px ${ activeTab === 'shared' ? 'bg-amber-100 text-amber-700' : 'bg-black/5 text-black/45' }`}>
+							{ sharedCount }
+						</span>
+					}
+					{ activeTab === 'shared' && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-amber-400" /> }
+				</button>
 			</div>
 
 			<div className="flex-1 overflow-y-auto">
+				{ activeTab === 'shared' ?
+					<RightPanelSharedTab />
+				:
+				<>
 				<div className="px-4 py-3 border-b border-black/6">
 					<p className="text-[10px] font-[Lato-Bold] text-black/30 uppercase tracking-widest mb-2">Blueprint</p>
 					<div className="flex items-start gap-2">
@@ -64,13 +101,17 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 				<div className="px-4 py-3 border-b border-black/6 space-y-2.5">
 					<p className="text-[10px] font-[Lato-Bold] text-black/30 uppercase tracking-widest mb-1"> Details </p>
 
+					{ !hasAnyDetails &&
+						<p className="text-xs font-[Lato-Regular] text-black/30 italic"> No additional details </p>
+					}
+
 					{/* Description */}
 					{ instance?.description &&
-						<div className="flex items-center gap-2">
-							<Building2 className="w-3.5 h-3.5 text-black/25 shrink-0" />
+						<div className="flex items-start gap-2">
+							<FileText className="w-3.5 h-3.5 text-black/25 shrink-0 mt-0.5" />
 							<div className="min-w-0">
 								<p className="text-[10px] font-[Lato-Bold] text-black/35 uppercase tracking-wider"> Description </p>
-								<p className="text-xs font-[Lato-Regular] text-black/60 truncate"> { instance.description } </p>
+								<p className="text-xs font-[Lato-Regular] text-black/60 whitespace-pre-wrap wrap-break-word"> { instance.description } </p>
 							</div>
 						</div>
 					}
@@ -89,7 +130,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 					{/* Office */}
 					{ instance?.office &&
 						<div className="flex items-center gap-2">
-							<Building2 className="w-3.5 h-3.5 text-black/25 shrink-0" />
+							<MapPin className="w-3.5 h-3.5 text-black/25 shrink-0" />
 							<div className="min-w-0">
 								<p className="text-[10px] font-[Lato-Bold] text-black/35 uppercase tracking-wider"> Office </p>
 								<p className="text-xs font-[Lato-Regular] text-black/60 truncate"> { instance.office.name } </p>
@@ -102,20 +143,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 						<User className="w-3.5 h-3.5 text-black/25 shrink-0" />
 						<div className="min-w-0">
 							<p className="text-[10px] font-[Lato-Bold] text-black/35 uppercase tracking-wider"> Assigned To </p>
-							{ assignee ?
-								<div className="flex items-center gap-1.5 mt-0.5">
-									<div className="w-4 h-4 rounded-full bg-black/6 flex items-center justify-center shrink-0">
-										<span className="text-[8px] font-[Lato-Bold] text-black/50 uppercase">
-											{ assignee.firstName?.charAt(0)}{assignee.lastName?.charAt(0) }
-										</span>
-									</div>
-									<p className="text-xs font-[Lato-Regular] text-black/60 truncate">
-										{ assignee.firstName } { assignee.lastName }
-									</p>
-								</div>
-							:
-								<p className="text-xs font-[Lato-Regular] text-black/30"> Unassigned </p>
-							}
+							<UserChip firstName={assignee?.firstName} lastName={assignee?.lastName} emptyText="Unassigned" />
 						</div>
 					</div>
 
@@ -125,9 +153,7 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 							<User className="w-3.5 h-3.5 text-black/25 shrink-0" />
 							<div className="min-w-0">
 								<p className="text-[10px] font-[Lato-Bold] text-black/35 uppercase tracking-wider"> Created By </p>
-								<p className="text-xs font-[Lato-Regular] text-black/60 truncate">
-									{ creator.firstName } { creator.lastName }
-								</p>
+								<UserChip firstName={creator.firstName} lastName={creator.lastName} />
 							</div>
 						</div>
 					}
@@ -152,90 +178,58 @@ const MyWorkspaceInstanceRightPanel = (): ReactElement => {
 						<p className="text-[10px] font-[Lato-Bold] text-black/30 uppercase tracking-widest mb-2"> Linked Operations </p>
 						<div className="space-y-1">
 							{ launchedFromInstance &&
-								<div className="flex items-center gap-2 px-2 py-1.5 rounded-lg">
-									<ExternalLink className="w-3 h-3 text-blue-400 shrink-0" />
-									<span className="text-xs font-[Lato-Regular] text-blue-600 flex-1 truncate">
-										{ launchedFromInstance.title }
-									</span>
-									<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
-								</div>
+								<LinkedOperationRow
+									tone="blue"
+									icon={<ExternalLink className="w-3 h-3 text-blue-400" />}
+									title={launchedFromInstance.title}
+								/>
 							}
 
-							{ linkedGlobalInstances.map(gi => {
-								const colors = INSTANCE_STATUS_COLORS[gi.status as keyof typeof INSTANCE_STATUS_COLORS];
-								return (
-									<div key={gi.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
-										<Link2 className="w-3 h-3 text-violet-400 shrink-0" />
-										<span className="text-xs font-[Lato-Regular] text-violet-600 flex-1 truncate"> { gi.title } </span>
-										{ colors &&
-											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0 ${colors.bg} ${colors.text}`}>
-												{gi.status.replace(/_/g, " ")}
-											</span>
-										}
-										<ArrowRight className="w-3 h-3 text-violet-300 shrink-0" />
-									</div>
-								);
-							})}
+							{ linkedGlobalInstances.map(gi => (
+								<LinkedOperationRow key={gi.id}
+									tone="violet"
+									icon={<Link2 className="w-3 h-3 text-violet-400" />}
+									title={gi.title}
+									status={gi.status}
+								/>
+							))}
 
-							{ linkedOtherInstances.map((oi: any) => {
-								const colors = INSTANCE_STATUS_COLORS[oi.status as keyof typeof INSTANCE_STATUS_COLORS];
+							{ linkedOtherInstances.map((oi: any) => (
+								<LinkedOperationRow key={oi.id}
+									tone="amber"
+									icon={<Link2 className="w-3 h-3 text-amber-400" />}
+									title={oi.title}
+									code={oi.code}
+									status={oi.status}
+								/>
+							))}
 
-								return (
-									<div key={oi.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
-										<Link2 className="w-3 h-3 text-amber-400 shrink-0" />
-										<div className="flex-1 min-w-0">
-											<span className="text-xs font-[Lato-Regular] text-amber-700 truncate block"> { oi.title } </span>
-											<span className="text-[9px] font-[Lato-Regular] text-amber-400/80"> { oi.code } </span>
-										</div>
-										{ colors &&
-											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0 ${colors.bg} ${colors.text}`}>
-												{ oi.status.replace(/_/g, " ") }
-											</span>
-										}
-										<ArrowRight className="w-3 h-3 text-amber-300 shrink-0" />
-									</div>
-								);
-							})}
+							{ instance.sourceLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
+								<LinkedOperationRow key={`s-${l.id}`}
+									tone="blue"
+									icon={<Link2 className="w-3 h-3 text-blue-400" />}
+									title={l.targetInstance.title}
+									code={l.targetInstance.code}
+									status={l.targetInstance.status}
+								/>
+							))}
 
-							{ instance.sourceLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).length > 0 &&
-								<div className="space-y-1 mb-3">
-									{ instance.sourceLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
-										<div key={l.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
-											<Link2 className="w-3 h-3 text-blue-400 shrink-0" />
-											<div className="flex-1 min-w-0">
-												<span className="text-xs font-[Lato-Regular] text-blue-700 truncate block"> { l.targetInstance.title } </span>
-												<span className="text-[9px] font-[Lato-Regular] text-blue-400/80"> { l.targetInstance.code } </span>
-											</div>
-											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0`}>
-												{ l.targetInstance.status.replace(/_/g, " ") }
-											</span>
-											<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
-										</div>
-									))}
-								</div>
-							}
-							{ instance.targetLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).length > 0 &&
-								<div className="space-y-1 mb-3">
-									{ instance.targetLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
-										<div key={l.id} className="w-full text-left flex items-center gap-2 px-2 py-1.5 rounded-lg">
-											<Link2 className="w-3 h-3 text-blue-400 shrink-0" />
-											<div className="flex-1 min-w-0">
-												<span className="text-xs font-[Lato-Regular] text-blue-700 truncate block"> { l.sourceInstance.title } </span>
-												<span className="text-[9px] font-[Lato-Regular] text-blue-400/80"> { l.sourceInstance.code } </span>
-											</div>
-											<span className={`text-[9px] font-[Lato-Bold] px-1.5 py-px rounded-full shrink-0`}>
-												{ l.sourceInstance.status.replace(/_/g, " ") }
-											</span>
-											<ArrowRight className="w-3 h-3 text-blue-300 shrink-0" />
-										</div>
-									))}
-								</div>
-							}
+							{ instance.targetLinks.filter(l => l.linkType === LinkType.OTHER_OTHER).map(l => (
+								<LinkedOperationRow key={`t-${l.id}`}
+									tone="blue"
+									icon={<Link2 className="w-3 h-3 text-blue-400" />}
+									title={l.sourceInstance.title}
+									code={l.sourceInstance.code}
+									status={l.sourceInstance.status}
+								/>
+							))}
 						</div>
 					</div>
 				}
+				</>
+				}
 			</div>
-		</div>
+		</aside>
 	);
 };
 

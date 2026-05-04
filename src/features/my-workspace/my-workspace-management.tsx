@@ -5,6 +5,7 @@ import {
     useState,
     type ReactElement
 } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     FileEdit,
     FolderCog,
@@ -52,6 +53,10 @@ import {
     useOperationInstance
 } from '../../server/hooks/useOperationInstance';
 import {
+    useOperationRequest
+} from '../../server/hooks/useOperationRequest';
+import {
+    canOpenInstance,
     getStatusInstanceBg,
     getStatusInstanceLabel,
     type FilterStatus
@@ -60,17 +65,27 @@ import {
     Badge
 } from '../../shared/components/badge';
 import MyWorkspaceHeader from './components/my-workspace-header';
+import MyWorkspaceRequestsPanel from './components/my-workspace-requests-panel';
 import Button from '../../shared/components/button';
 import PermissionGate from '../../shared/components/permission-gate';
 import usePermissions from '../../shared/hooks/usePermissions';
 
+type WorkspaceView = 'instances' | 'requests';
+
 const MyWorkspaceManagement = (): ReactElement => {
     /** Navigation utilities */
 	const navigate = useNavigate();
+	const [searchParams, setSearchParams] = useSearchParams();
 	/** Operation api utilities */
 	const { instances, retrieveInstances, deleteInstance } = useOperationInstance();
+	/** Pending requests count for badge (DIR/DG only) */
+	const { requests: pendingRequests, retrieveRequests: retrievePendingRequests } = useOperationRequest();
 	/** Toast utilities */
 	const { onConfirmationToast, onToast } = useToast();
+	/** State to manage the active view */
+	const [view, setView] = useState<WorkspaceView>(() =>
+		(searchParams.get('view') as WorkspaceView) === 'requests' ? 'requests' : 'instances'
+	);
 	/** State to manage the filter */
 	const [filterStatus, setFilterStatus] = useState<FilterStatus>('ALL');
 	/** State to manage the pagination */
@@ -80,10 +95,27 @@ const MyWorkspaceManagement = (): ReactElement => {
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	/** Permissions utilities */
 	const { user } = usePermissions();
+
+	const handleSetView = (v: WorkspaceView): void => {
+		setView(v);
+		if (v === 'requests') {
+			setSearchParams({ view: 'requests' }, { replace: true });
+		} else {
+			setSearchParams({}, { replace: true });
+		}
+	};
 	
 	useEffect(() => {
 		retrieveInstances();
 	}, []);
+
+	useEffect(() => {
+		if (!user?.role?.code) return;
+		const canSeeRequests = user.role.code === UserRole.DIR || user.role.code === UserRole.DG;
+		if (canSeeRequests) {
+			retrievePendingRequests({ status: 'PENDING' });
+		}
+	}, [user?.role?.code]);
 
 	/** Reset page to 1 when filter changes */
 	useEffect(() => {
@@ -104,14 +136,13 @@ const MyWorkspaceManagement = (): ReactElement => {
 		return sortedInstances.slice(start, start + pageSize);
 	}, [sortedInstances, currentPage, pageSize]);
 
-	/** Redirect the user to the detail page */
-	const goToDetail = (id: number, typeOp: OperationType): void => {
-		console.log(user);
-		if( user?.role.code === UserRole.C && typeOp === OperationType.GLOBAL ) {
-			onToast({ message: 'You don\'t have permissions to access global operations.', type: 'warning' });
+	/** Redirect the user to the detail page (no-op when access is not granted) */
+	const goToDetail = (instance: OperationInstance): void => {
+		if ( !canOpenInstance(user, instance) ) {
+			onToast({ message: "You don't have permissions to access this operation.", type: 'warning' });
 			return;
 		}
-		navigate(`/workspace/detail/${id}`);
+		navigate(`/workspace/detail/${instance.id}`);
 	};
 
 	/** Redirect the user to the new instance page */
@@ -196,10 +227,19 @@ const MyWorkspaceManagement = (): ReactElement => {
 
     return (
        <div className="h-full">
-			<MyWorkspaceHeader filterStatus={filterStatus} setFilterStatus={setFilterStatus} goToNewInstance={goToNewInstance} />
+			<MyWorkspaceHeader
+				filterStatus={filterStatus}
+				setFilterStatus={setFilterStatus}
+				goToNewInstance={goToNewInstance}
+				view={view}
+				setView={handleSetView}
+				user={user}
+				pendingCount={pendingRequests.length}
+			/>
 
 			<div ref={scrollContainerRef} className="h-full flex-1 flex flex-col overflow-y-auto relative mt-5">
-				{ sortedInstances.length > 0 ?
+				{ view === 'requests' && <MyWorkspaceRequestsPanel /> }
+				{ view === 'instances' && (sortedInstances.length > 0 ?
 					<>
 						{/* Table */}
 						<div className="bg-white rounded-2xl border border-black/6 overflow-hidden flex-1">
@@ -216,10 +256,11 @@ const MyWorkspaceManagement = (): ReactElement => {
 							{/* Table rows */}
 							{ paginatedInstances.map((instance) => {
 								const progress = getStepProgress(instance);
+								const openable = canOpenInstance(user, instance);
 
 								return (
-									<div key={instance.id} onClick={() => goToDetail(instance.id, instance.blueprint.type)}
-										className="grid grid-cols-[2fr_1fr_1.2fr_1.2fr_1.2fr_48px] gap-4 px-6 py-4 border-b border-black/4 last:border-b-0 hover:bg-black/1.5 cursor-pointer transition-colors duration-150 items-center"
+									<div key={instance.id} onClick={() => goToDetail(instance)}
+										className={`grid grid-cols-[2fr_1fr_1.2fr_1.2fr_1.2fr_48px] gap-4 px-6 py-4 border-b border-black/4 last:border-b-0 transition-colors duration-150 items-center ${ openable ? 'hover:bg-black/1.5 cursor-pointer' : 'opacity-60 cursor-not-allowed' }`}
 									>
 										<div className="flex items-center gap-3 min-w-0">
 											<div className="flex items-center justify-center w-9 h-9 rounded-xl bg-black/3 shrink-0">
@@ -292,17 +333,26 @@ const MyWorkspaceManagement = (): ReactElement => {
 													</button>
 												</DropdownMenuTrigger>
 												<DropdownMenuContent align="end" className="w-56 rounded-2xl border-black/5 shadow-xl p-2 bg-white/95 backdrop-blur-xl">
-													<DropdownMenuItem className="rounded-xl cursor-pointer p-3 transition-colors hover:bg-black/2" onClick={(e) => { e.stopPropagation(); goToDetail(instance.id, instance.blueprint.type); }}>
-														<FileEdit className="mr-3 h-4 w-4 text-black/40" />
-														<span className="font-[Lato-Regular] text-black/80"> Open Instance </span>
-													</DropdownMenuItem>
-													<PermissionGate permissions="operations.soft_delete">
-														<DropdownMenuSeparator className="bg-black/2 my-2" />
-														<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, instance)}>
-															<Trash2 className="mr-3 h-4 w-4" />
-															<span className="font-[Lato-Regular]"> Delete </span>
+													{ openable &&
+														<DropdownMenuItem className="rounded-xl cursor-pointer p-3 transition-colors hover:bg-black/2" onClick={(e) => { e.stopPropagation(); goToDetail(instance); }}>
+															<FileEdit className="mr-3 h-4 w-4 text-black/40" />
+															<span className="font-[Lato-Regular] text-black/80"> Open Instance </span>
 														</DropdownMenuItem>
-													</PermissionGate>
+													}
+													{ openable &&
+														<PermissionGate permissions="operations.soft_delete">
+															<DropdownMenuSeparator className="bg-black/2 my-2" />
+															<DropdownMenuItem className="rounded-xl cursor-pointer p-3 text-red-600 focus:text-red-600 focus:bg-red-50 transition-colors" onClick={(e) => handleDelete(e, instance)}>
+																<Trash2 className="mr-3 h-4 w-4" />
+																<span className="font-[Lato-Regular]"> Delete </span>
+															</DropdownMenuItem>
+														</PermissionGate>
+													}
+													{ !openable &&
+														<DropdownMenuItem disabled className="rounded-xl p-3 opacity-60 cursor-not-allowed">
+															<span className="font-[Lato-Regular] text-black/50"> No actions available </span>
+														</DropdownMenuItem>
+													}
 												</DropdownMenuContent>
 											</DropdownMenu>
 										</div>
@@ -343,7 +393,7 @@ const MyWorkspaceManagement = (): ReactElement => {
 							</Button>
 						}
 					</div>
-				}
+				)}
 			</div>
 		</div>
     );

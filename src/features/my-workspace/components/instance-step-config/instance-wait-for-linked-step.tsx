@@ -12,7 +12,6 @@ import {
 import {
     useWorkspaceInstanceContext
 } from '../../context/workspace-instance.context';
-import SharedDocumentsPanel from '../shared-documents-panel';
 
 /** Linked operations are considered "ready" for wait-step completion in any of these statuses. */
 const COMPLETING_STATUSES: OperationInstanceStatus[] = [
@@ -24,13 +23,6 @@ const COMPLETING_STATUSES: OperationInstanceStatus[] = [
 const InstanceWaitForLinkedStep = (): ReactElement => {
     /** My workspace utilities (shared via context) */
     const { dependsOnLinks } = useWorkspaceInstanceContext();
-
-    useEffect(() => {
-        console.log(dependsOnLinks);
-    }, [])
-
-    /** Sub-op links that have actually shared something back to this wait step. */
-    const linksWithShared = (dependsOnLinks as any[]).filter(l => (l.sharedDocuments ?? []).length > 0);
 
     return (
         <div className="space-y-2">
@@ -70,17 +62,6 @@ const InstanceWaitForLinkedStep = (): ReactElement => {
                     }
                 </div>
             </div>
-
-            {/* Documents the sub-operation(s) shared back to this one — viewer mode. */}
-            { linksWithShared.map((link: any) => (
-                <SharedDocumentsPanel
-                    key={`wait-shared-${link.id}`}
-                    instanceLinkId={link.id}
-                    sharedDocuments={link.sharedDocuments}
-                    counterpartTitle={link.sourceInstance?.title}
-                    mode="viewer"
-                />
-            ))}
         </div>
     );
 }

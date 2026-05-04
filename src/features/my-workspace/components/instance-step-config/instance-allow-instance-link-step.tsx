@@ -5,6 +5,7 @@ import {
 } from 'react';
 import {
     ArrowRight,
+    Info,
     Link2,
     X
 } from 'lucide-react';
@@ -25,16 +26,15 @@ import type {
 import {
     useToast
 } from '../../../../shared/hooks/useToast';
-import LaunchOperationDialog from '../launch-operation-dialog/launch-operation-dialog';
-import SharedDocumentsPanel from '../shared-documents-panel';
 import Button from '../../../../shared/components/button';
 import { getResponseMessage } from '../../../../server/hooks/useApolloWithToast';
 
 interface Props {
     allowLinkBlueprintIds: number[];
+    isReadOnly?: boolean;
 }
 
-const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactElement => {
+const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds, isReadOnly = false }: Props): ReactElement => {
     /** My workspace instance utilities */
     const { instance, blueprint, linkableOtherInstances, refreshInstance } = useWorkspaceInstanceContext();
     /** Operation instance api utilities */
@@ -49,8 +49,6 @@ const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactE
 	const [linkingInProgress, setLinkingInProgress] = useState<boolean>(false);
     /** List of all the available other operations */
     const [otherOperationsAvailable, setOtherOperationsAvailable] = useState<any[]>([]);
-    /** Pending target instance for which the user is about to confirm + share docs */
-    const [pendingTarget, setPendingTarget] = useState<{ id: number; title?: string } | null>(null);
 
     if( !instance ) {
         return <></>;
@@ -79,26 +77,21 @@ const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactE
         return preReqIds.includes(blueprintId);
     };
 
-    /** Open the share-docs dialog for the picked target instance — actual linking happens on submit. */
-    const onSelectOtherOperation = (target: { id: number; title?: string }): void => {
-        setPendingTarget(target);
-    }
-
-    /** Confirm linking + share documents in one round-trip */
-    const onConfirmLink = async (payload: { sharedFormInstanceIds: number[]; sharedDocumentIds: number[] }): Promise<void> => {
-        if ( !pendingTarget ) return;
+    /**
+     * Link the current operation with the picked one. Per spec, OTHER_OTHER /
+     * GLOBAL_OTHER links grant implicit full visibility, so we don't ask the
+     * user to pick documents anymore.
+     */
+    const onSelectOtherOperation = async (target: { id: number; title?: string }): Promise<void> => {
         setLinkingInProgress(true);
         try {
             const response: FetchResult<{ data: ApiResponse }> = await linkInstances({ input: {
                 sourceInstanceId: instance.id,
-                targetInstanceIds: [pendingTarget.id],
+                targetInstanceIds: [target.id],
                 linkType: instance.blueprint.type === OperationType.GLOBAL ? LinkType.GLOBAL_OTHER : LinkType.OTHER_OTHER,
-                sharedFormInstanceIds: payload.sharedFormInstanceIds,
-                sharedDocumentIds: payload.sharedDocumentIds,
             } });
             await refreshInstance();
             onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data.success ? 'success' : 'error' });
-            setPendingTarget(null);
             setShowLinkPicker(false);
             setLinkSearch("");
         } finally {
@@ -150,12 +143,18 @@ const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactE
                 </div>
             }
 
-            { !showLinkPicker ?
+            { !isReadOnly && (!showLinkPicker ?
                 <Button variant="secondary" size="sm" onClick={onOpenLinkList} className="w-full">
                     <Link2 className="w-3.5 h-3.5" /> Link Instance
                 </Button>
             :
                 <div className="space-y-2">
+                    <div className="flex items-start gap-2 px-2 py-1.5 rounded-md bg-blue-50/40 border border-blue-100">
+                        <Info className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
+                        <p className="text-[11px] font-[Lato-Regular] text-blue-700/80">
+                            Linking grants full read access to the other operation's forms and documents.
+                        </p>
+                    </div>
                     <input type="text" placeholder="Search by title or code…"
                         value={linkSearch} onChange={e => setLinkSearch(e.target.value)} autoFocus
                         className="w-full rounded-md border-[0.5px] border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:border-primary/30 transition-all shadow-sm"
@@ -183,31 +182,7 @@ const InstanceAllowInstanceLinkStep = ({ allowLinkBlueprintIds }: Props): ReactE
                         Cancel
                     </Button>
                 </div>
-            }
-
-            {/* Per-link "Documents shared" panels — owner side */}
-            { (instance.sourceLinks ?? []).filter(l => (l as any).sharedDocuments != null).map(l => (
-                <div key={`share-${l.id}`} className="mt-3">
-                    <SharedDocumentsPanel
-                        instanceLinkId={l.id}
-                        sharedDocuments={(l as any).sharedDocuments ?? []}
-                        counterpartTitle={l.targetInstance?.title}
-                        mode="owner"
-                    />
-                </div>
-            ))}
-
-            { pendingTarget &&
-                <LaunchOperationDialog
-                    isOpen={!!pendingTarget}
-                    onClose={() => setPendingTarget(null)}
-                    headerTitle={`Link with ${pendingTarget.title ?? 'operation'}`}
-                    headerSubtitle="Optionally share documents from this operation."
-                    submitLabel="Confirm link"
-                    fixedBlueprint={{ id: pendingTarget.id, title: pendingTarget.title ?? 'Linked operation' }}
-                    onSubmit={onConfirmLink}
-                />
-            }
+            )}
         </div>
     );
 }

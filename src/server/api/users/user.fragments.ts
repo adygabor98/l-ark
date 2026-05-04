@@ -22,6 +22,12 @@ export const USER_LOGIN_FIELDS = gql`
             code
             permissions
         }
+        managedDivisions {
+            id
+            status
+            office { id }
+            division { id }
+        }
     }
 `;
 

@@ -76,7 +76,7 @@ const StepRenderers = ({ blueprintStep, instance, isReadOnly }: StepRenderersPro
     // Conditional layer flags — kept as locals so the JSX below stays readable.
     const showNotificationGate = stepType === StepType.NOTIFICATION
         && (blueprintStep.notificationPersons?.length ?? 0) > 0;
-    const showInstanceLink = blueprintStep.allowInstanceLink && !isReadOnly;
+    const showInstanceLink = blueprintStep.allowInstanceLink;
     const expectedDocuments = (blueprintStep.expectedDocuments ?? []).filter(Boolean);
     const showDocuments = expectedDocuments.length > 0 || blueprintStep.allowDocumentUpload;
     const showFileTemplates = (blueprintStep.fileTemplates?.length ?? 0) > 0;
@@ -105,6 +105,7 @@ const StepRenderers = ({ blueprintStep, instance, isReadOnly }: StepRenderersPro
                             .map((b: any) => b.blueprint?.id ?? b.blueprintId)
                             .filter((id: number) => id != null)
                     }
+                    isReadOnly={isReadOnly}
                 />
             )}
 

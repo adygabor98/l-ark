@@ -6,6 +6,7 @@ import {
     Download,
     Eye,
     FileText,
+    Lock,
     Paperclip,
     Plus,
     Share2,
@@ -37,6 +38,8 @@ export interface SharedDocumentRow {
     formInstanceId?: number | null;
     documentId?: number | null;
     createdAt?: string;
+    /** True when the row is a server-synthesized read-only entry (OTHER_OTHER / GLOBAL_OTHER full-access link). */
+    synthetic?: boolean | null;
     formInstance?: {
         id: number;
         displayName?: string | null;
@@ -76,6 +79,8 @@ interface SharedDocumentsPanelProps {
      * "viewer" mode (the target seeing what was shared with it) is read-only.
      */
     mode: 'owner' | 'viewer';
+    /** Compact density tightens paddings/font sizes for use in narrow panels (e.g. the right panel). */
+    density?: 'default' | 'compact';
 }
 
 const formatBytes = (n: number): string => {
@@ -85,7 +90,7 @@ const formatBytes = (n: number): string => {
 };
 
 const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement => {
-    const { instanceLinkId, sharedDocuments, counterpartTitle, mode } = props;
+    const { instanceLinkId, sharedDocuments, counterpartTitle, mode, density = 'default' } = props;
     const { manageSharedDocuments } = useOperationInstance();
     const { onToast, onConfirmationToast } = useToast();
     const { instance, refreshInstance } = useWorkspaceInstanceContext();
@@ -101,6 +106,8 @@ const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement =>
         if (origin == null) return mode === 'viewer';
         return mode === 'owner' ? origin === instance.id : origin !== instance.id;
     });
+    /** Synthetic rows (read-only, implicit-access link) disable per-item add/revoke controls. */
+    const isSyntheticLink = visibleRows.length > 0 && visibleRows.every(r => r.synthetic === true);
     const [pickerOpen, setPickerOpen] = useState(false);
     /** Controls the form-instance preview/export modal (reuses ExportFileInstance) */
     const [exportConfig, setExportConfig] = useState<{ templateId: number; formInstanceId: number; templateName?: string } | null>(null);
@@ -139,17 +146,39 @@ const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement =>
         if ( res.data?.data?.success ) await refreshInstance();
     };
 
+    const isCompact = density === 'compact';
+    const headerPad = isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2';
+    const rowPad = isCompact ? 'px-2.5 py-1.5' : 'px-3 py-2';
+    const titleSize = isCompact ? 'text-[11px]' : 'text-xs';
+    const labelSize = isCompact ? 'text-[11px]' : 'text-xs';
+
     return (
         <div className="rounded-xl border border-black/6 bg-white">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-black/4">
-                <div className="flex items-center gap-2">
-                    <Share2 className="w-3.5 h-3.5 text-violet-500" />
-                    <span className="text-xs font-[Lato-Bold] text-black/70">
-                        { mode === 'owner' ? 'Documents shared' : 'Documents shared with this operation' }
+            <div className={`flex items-center justify-between ${headerPad} border-b border-black/4`}>
+                <div className="flex items-center gap-2 min-w-0">
+                    { isSyntheticLink
+                        ? <Lock className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                        : <Share2 className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                    }
+                    <span className={`${titleSize} font-[Lato-Bold] text-black/70 truncate`}>
+                        { mode === 'owner' ? 'Documents shared' : 'Shared with this operation' }
                         { counterpartTitle && <span className="text-black/40 font-[Lato-Regular] ml-1"> — { counterpartTitle } </span> }
                     </span>
+                    { visibleRows.length > 0 &&
+                        <span className="text-[10px] font-[Lato-Bold] text-black/45 bg-black/5 rounded-full px-1.5 py-0.5 shrink-0">
+                            { visibleRows.length }
+                        </span>
+                    }
+                    { isSyntheticLink &&
+                        <span
+                            className="text-[9px] font-[Lato-Bold] text-violet-600 bg-violet-50 border border-violet-100 rounded-full px-1.5 py-0.5 shrink-0"
+                            title="Full access — managed by the link itself; nothing to add or revoke per item."
+                        >
+                            Full access
+                        </span>
+                    }
                 </div>
-                { mode === 'owner' &&
+                { mode === 'owner' && !isSyntheticLink &&
                     <Button variant="ghost" size="sm" onClick={() => setPickerOpen(true)}>
                         <Plus className="w-3 h-3" /> Add
                     </Button>
@@ -161,9 +190,10 @@ const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement =>
                     { mode === 'owner' ? 'Nothing shared yet.' : 'No documents have been shared.' }
                 </p>
             :
-                <div className="divide-y divide-black/4">
+                <div className="max-h-60 overflow-y-auto divide-y divide-black/4">
                     { visibleRows.map(row => {
                         const isForm = row.formInstance != null;
+                        const isSynthetic = row.synthetic === true;
                         const label = isForm
                             ? (row.formInstance?.displayName ?? `Form #${row.formInstance?.id ?? row.formInstanceId}`)
                             : (row.document?.fileName ?? `Document #${row.documentId}`);
@@ -178,13 +208,13 @@ const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement =>
                         const canDownloadDoc = !isForm && row.document?.id != null;
 
                         return (
-                            <div key={row.id} className="flex items-center justify-between px-3 py-2 group">
+                            <div key={row.id} className={`flex items-center justify-between ${rowPad} group`}>
                                 <div className="flex items-center gap-2 min-w-0">
                                     { isForm
                                         ? <FileText className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                                         : <Paperclip className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                                     }
-                                    <span className="text-xs font-[Lato-Regular] text-black/70 truncate"> { label } </span>
+                                    <span className={`${labelSize} font-[Lato-Regular] text-black/70 truncate`}> { label } </span>
                                     { sub &&
                                         <span className="text-[10px] text-black/30 font-[Lato-Regular] shrink-0"> { sub } </span>
                                     }
@@ -210,7 +240,7 @@ const SharedDocumentsPanel = (props: SharedDocumentsPanelProps): ReactElement =>
                                             <Download className="w-3.5 h-3.5" />
                                         </button>
                                     }
-                                    { mode === 'owner' &&
+                                    { mode === 'owner' && !isSynthetic &&
                                         <button onClick={() => handleRevoke(row.id)}
                                             className="w-6 h-6 rounded flex items-center justify-center text-black/30 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
                                             title="Stop sharing"

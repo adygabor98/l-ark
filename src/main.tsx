@@ -61,7 +61,7 @@ const App = () => {
 												options={{
 													fill: "#171717",
 													styles: { description: "text-white/75!" },
-													duration: 2000
+													duration: null
 												}}
 											/>
 										</>

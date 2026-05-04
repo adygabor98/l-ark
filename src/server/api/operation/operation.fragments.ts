@@ -96,6 +96,7 @@ export const BLUEPRINT_DETAIL_FIELDS = gql`
                 id
                 title
                 subType
+                type
             }
             conditionalVisibility
             allowInstanceLink
@@ -320,6 +321,7 @@ export const INSTANCE_DETAIL_FIELDS = gql`
                 openBlueprints {
                     id
                     title
+                    type
                 }
                 conditionalVisibility
                 allowInstanceLink
@@ -385,6 +387,7 @@ export const INSTANCE_DETAIL_FIELDS = gql`
             sharedDocuments {
                 id
                 instanceLinkId
+                synthetic
                 formInstanceId
                 documentId
                 createdAt
@@ -433,6 +436,7 @@ export const INSTANCE_DETAIL_FIELDS = gql`
             sharedDocuments {
                 id
                 instanceLinkId
+                synthetic
                 formInstanceId
                 documentId
                 createdAt

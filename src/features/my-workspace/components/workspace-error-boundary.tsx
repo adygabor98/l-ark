@@ -4,6 +4,7 @@ import {
 } from 'react';
 import {
     AlertTriangle,
+    ArrowLeft,
     RefreshCcw
 } from 'lucide-react';
 
@@ -56,14 +57,24 @@ export class WorkspaceErrorBoundary extends Component<Props, State> {
                         <p className="text-sm text-black/50 font-[Lato-Regular]">
                             We couldn&apos;t render this operation. The error was: {this.state.message}
                         </p>
-                        <button
-                            type="button"
-                            onClick={() => window.location.reload()}
-                            className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-black/80 font-[Lato-Bold] text-sm transition-colors"
-                        >
-                            <RefreshCcw className="w-3.5 h-3.5" />
-                            Reload page
-                        </button>
+                        <div className="mt-2 flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => { window.location.href = '/workspace'; }}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-black/5 hover:bg-black/8 text-black/70 font-[Lato-Bold] text-sm transition-colors"
+                            >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                Back to workspace
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => window.location.reload()}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400 hover:bg-amber-500 text-black/80 font-[Lato-Bold] text-sm transition-colors"
+                            >
+                                <RefreshCcw className="w-3.5 h-3.5" />
+                                Reload page
+                            </button>
+                        </div>
                     </div>
                 </div>
             );

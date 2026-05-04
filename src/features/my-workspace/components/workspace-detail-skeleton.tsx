@@ -20,7 +20,7 @@ const WorkspaceDetailSkeleton = (): ReactElement => {
             {/* Body */}
             <div className="flex-1 flex gap-3 min-h-0">
                 {/* Timeline */}
-                <div className="w-72 bg-white rounded-xl border border-black/6 shadow-sm p-3 flex flex-col gap-2">
+                <div className="w-64 xl:w-72 bg-white rounded-xl border border-black/6 shadow-sm p-3 flex flex-col gap-2">
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className="h-12 w-full rounded-lg bg-black/4" />
                     ))}
@@ -36,7 +36,7 @@ const WorkspaceDetailSkeleton = (): ReactElement => {
                 </div>
 
                 {/* Right panel */}
-                <div className="w-80 bg-white rounded-xl border border-black/6 shadow-sm p-3 flex flex-col gap-2">
+                <div className="w-64 xl:w-72 bg-white rounded-xl border border-black/6 shadow-sm p-3 flex flex-col gap-2">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <div key={i} className="h-16 w-full rounded-lg bg-black/4" />
                     ))}

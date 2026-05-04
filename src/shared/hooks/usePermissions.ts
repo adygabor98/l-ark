@@ -39,6 +39,8 @@ interface UsePermissionsReturn {
     checkPermissions: (paths: PermissionPath | PermissionPath[], options?: PermissionCheckOptions) => boolean;
     /** Check if user can access a route */
     canAccessRoute: (requiredPermissions?: PermissionPath | PermissionPath[], options?: PermissionCheckOptions) => boolean;
+    /** True when the user is the director (OfficeDivision manager) of the given (officeId, divisionId). */
+    isManagerOf: (officeId: number | string, divisionId: number | string) => boolean;
 }
 
 export const usePermissions = (): UsePermissionsReturn => {
@@ -64,6 +66,14 @@ export const usePermissions = (): UsePermissionsReturn => {
         return accessControlService.canAccessRoute(user, requiredPermissions, options);
     }, [user]);
 
+    const isManagerOf = useCallback((officeId: number | string, divisionId: number | string): boolean => {
+        const list = user?.managedDivisions ?? [];
+        return list.some(d =>
+            String(d.office?.id) === String(officeId) &&
+            String(d.division?.id) === String(divisionId),
+        );
+    }, [user]);
+
     return {
         user,
         permissions,
@@ -73,6 +83,7 @@ export const usePermissions = (): UsePermissionsReturn => {
         hasAllPermissions,
         checkPermissions,
         canAccessRoute,
+        isManagerOf,
     };
 };
 

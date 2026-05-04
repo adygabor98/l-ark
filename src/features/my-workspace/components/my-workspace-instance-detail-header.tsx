@@ -21,6 +21,11 @@ import {
     STATUS_LABELS
 } from '../utils/my-workspace.utils';
 import Button from '../../../shared/components/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
+} from '../../../shared/components/tooltip';
 
 interface PropTypes {
     instance: OperationInstance;
@@ -48,17 +53,31 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 
     return (
         <header className="shrink-0 mb-3 bg-white rounded-xl border border-black/6 shadow-sm px-4 py-3 flex items-center gap-3">
-			<Button variant="icon" onClick={goBack} className="shrink-0">
-				<ChevronLeft className="w-5 h-5" />
-			</Button>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<span>
+						<Button variant="icon" onClick={goBack} className="shrink-0">
+							<ChevronLeft className="w-5 h-5" aria-label="Back to workspace" />
+						</Button>
+					</span>
+				</TooltipTrigger>
+				<TooltipContent side="bottom"> Back to workspace </TooltipContent>
+			</Tooltip>
 
 			<div className="w-px h-8 bg-black/6 shrink-0" />
 
 			<div className="flex-1 min-w-0">
 				<div className="flex items-center gap-2 flex-wrap">
-					<span className="text-sm font-[Lato-Bold] text-black truncate">
-						{ instance.title || "Untitled Instance" }
-					</span>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span className="text-sm font-[Lato-Bold] text-black truncate cursor-default">
+								{ instance.title || "Untitled Instance" }
+							</span>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-sm">
+							{ instance.title || "Untitled Instance" }
+						</TooltipContent>
+					</Tooltip>
 					{ instance.code &&
 						<Badge variant="secondary" className="text-[10px] font-[Lato-Bold] shrink-0">
 							{ instance.code }
@@ -70,21 +89,31 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 						</span>
 					}
 					{ isReadOnly &&
-						<span className="flex items-center gap-1 text-amber-600 shrink-0">
-							<Lock className="w-3 h-3" />
-							<span className="text-[10px] font-[Lato-Bold]"> Read-only </span>
-						</span>
+						<Badge variant="warning" className="text-[10px] font-[Lato-Bold] shrink-0 gap-1">
+							<Lock className="w-3 h-3" /> Read-only
+						</Badge>
 					}
+					{/* Compact progress for small screens */}
+					<span className="md:hidden ml-auto text-[10px] font-[Lato-Bold] text-black/45 shrink-0">
+						{ progress.completed }/{ progress.total } · { Math.round(progressPct) }%
+					</span>
 				</div>
 				 { instance.description &&
-					<p className="text-xs font-[Lato-Regular] text-black/40 truncate mt-0.5 max-w-md">
-						{ instance.description }
-					</p>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<p className="text-xs font-[Lato-Regular] text-black/40 truncate mt-0.5 max-w-md cursor-default">
+								{ instance.description }
+							</p>
+						</TooltipTrigger>
+						<TooltipContent side="bottom" className="max-w-md whitespace-pre-wrap wrap-break-word">
+							{ instance.description }
+						</TooltipContent>
+					</Tooltip>
 				}
 			</div>
 
 			<div className="flex items-center gap-3 shrink-0">
-				<div className="text-right">
+				<div className="text-right hidden md:block">
 					<div className="flex items-center gap-1.5 justify-end mb-1">
 						<span className="text-[10px] font-[Lato-Regular] text-black/35">
 							{ progress.completed}/{progress.total } steps
@@ -100,11 +129,21 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 					</div>
 				</div>
 
-				<button onClick={onToggleContextPanel}
-					className="w-8 h-8 rounded-lg flex items-center justify-center text-black/30 hover:bg-black/4 hover:text-black/60 transition-all cursor-pointer"
-				>
-					{ contextPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" /> }
-				</button>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span>
+							<Button variant="icon" onClick={onToggleContextPanel} className="shrink-0">
+								{ contextPanelOpen
+									? <PanelRightClose className="w-4 h-4" aria-label="Hide details panel" />
+									: <PanelRightOpen className="w-4 h-4" aria-label="Show details panel" />
+								}
+							</Button>
+						</span>
+					</TooltipTrigger>
+					<TooltipContent side="bottom">
+						{ contextPanelOpen ? "Hide details" : "Show details" } <span className="opacity-60 ml-1">]</span>
+					</TooltipContent>
+				</Tooltip>
 			</div>
 		</header>
     );

@@ -9,7 +9,9 @@ import {
 } from 'react-hook-form';
 import {
 	Shield,
-	Save
+	Save,
+	History,
+	RotateCcw
 } from 'lucide-react';
 import type {
 	RolePermissions
@@ -22,7 +24,8 @@ import type {
 	FetchResult
 } from '@apollo/client';
 import type {
-	ApiResponse
+	ApiResponse,
+	Role
 } from '@l-ark/types';
 import {
 	useToast
@@ -34,12 +37,16 @@ import {
 	useRole
 } from '../../server/hooks/useRole';
 import {
+	usePermissions
+} from '../../shared/hooks/usePermissions';
+import {
 	extractFieldErrors,
 	applyResponseErrors,
 	getResponseMessage
 } from '../../server/hooks/useApolloWithToast';
 import Button from '../../shared/components/button';
 import RoleDefinitionGrid from './components/role-definition-grid';
+import RoleHistoryDrawer from './components/role-history-drawer';
 
 export interface RolesFormValues {
 	permissions: Record<string, RolePermissions>;
@@ -47,11 +54,16 @@ export interface RolesFormValues {
 
 const RolesPermissionsManagement = (): ReactElement => {
 	/** Fetch roles from the API */
-	const { roles, retrieveRoles, updateRoles } = useRole();
+	const { roles, retrieveRoles, updateRoles, resetRolePermissions } = useRole();
+	/** Permission gate */
+	const { hasPermission } = usePermissions();
+	const canEdit = hasPermission('roles_permissions.edit' as any);
 	/** Definition of the form */
 	const form = useForm<RolesFormValues>({ defaultValues: { permissions: {} } });
 	/** State to manage the loading */
 	const [loading, setLoading] = useState<boolean>(false);
+	const [resettingId, setResettingId] = useState<string | number | null>(null);
+	const [historyRole, setHistoryRole] = useState<Role | null>(null);
 	/** Toast utilities */
 	const { onToast }= useToast();
 	/** Translation utilities */
@@ -86,6 +98,27 @@ const RolesPermissionsManagement = (): ReactElement => {
 		}
 	};
 
+	const handleReset = async (role: Role): Promise<void> => {
+		if (!canEdit) return;
+		const confirmed = window.confirm(`Reset "${role.name}" permissions to system defaults?`);
+		if (!confirmed) return;
+
+		setResettingId(role.id);
+		try {
+			const response: FetchResult<{ data: ApiResponse<number> }> = await resetRolePermissions({ roleId: String(role.id) });
+			onToast({ message: getResponseMessage(response.data?.data), type: response.data?.data?.success ? 'success' : 'error' });
+			if (response.data?.data?.success) {
+				await retrieveRoles();
+			}
+		} catch (e) {
+			console.error('reset role failed', e);
+		} finally {
+			setResettingId(null);
+		}
+	};
+
+	const sortedRoles = [...roles].sort((a: Role, b: Role) => a.id - b.id);
+
 	return (
 		<div className="space-y-8">
 			{/* Header */}
@@ -102,21 +135,63 @@ const RolesPermissionsManagement = (): ReactElement => {
 
 				<div className="flex items-center gap-4">
 					{/* Save */}
-					<Button variant="primary" size="md" loading={loading} loadingText={ t('buttons.saving') } disabled={ !form.formState.isDirty } onClick={() => { form.clearErrors(); form.handleSubmit(onSubmit)(); }}>
+					<Button variant="primary" size="md" loading={loading} loadingText={ t('buttons.saving') } disabled={ !form.formState.isDirty || !canEdit } onClick={() => { form.clearErrors(); form.handleSubmit(onSubmit)(); }}>
 						<Save className="w-4 h-4 mr-2" />
 						Save Changes
 					</Button>
 				</div>
 			</div>
 
+			{/* Per-role actions */}
+			{sortedRoles.length > 0 && (
+				<Card>
+					<CardContent className="p-4">
+						<div className="flex flex-wrap gap-3">
+							{sortedRoles.map((role) => (
+								<div key={role.id} className="flex items-center gap-2 border border-border/40 rounded-md px-3 py-2 bg-white">
+									<span className="text-[13px] font-[Lato-Bold] text-foreground">{role.name}</span>
+									<button
+										type="button"
+										title="View permission history"
+										className="text-muted-foreground hover:text-primary transition-colors p-1 cursor-pointer"
+										onClick={() => setHistoryRole(role)}
+									>
+										<History className="w-4 h-4" />
+									</button>
+									{canEdit && (
+										<button
+											type="button"
+											title="Reset to default permissions"
+											disabled={resettingId === role.id}
+											className="text-muted-foreground hover:text-amber-600 transition-colors p-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+											onClick={() => handleReset(role)}
+										>
+											<RotateCcw className={`w-4 h-4 ${resettingId === role.id ? 'animate-spin' : ''}`} />
+										</button>
+									)}
+								</div>
+							))}
+						</div>
+					</CardContent>
+				</Card>
+			)}
+
 			{/* Permission matrix */}
 			<Card>
 				<CardContent className="p-0!">
 					<FormProvider {...form}>
-						<RoleDefinitionGrid roles={roles} />
+						<RoleDefinitionGrid roles={roles} canEdit={canEdit} />
 					</FormProvider>
 				</CardContent>
 			</Card>
+
+			{/* History drawer */}
+			<RoleHistoryDrawer
+				open={historyRole !== null}
+				onClose={() => setHistoryRole(null)}
+				roleId={historyRole ? String(historyRole.id) : null}
+				roleName={historyRole?.name ?? undefined}
+			/>
 		</div>
 	);
 };

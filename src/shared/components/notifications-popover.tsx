@@ -13,8 +13,10 @@ import {
 	CircleCheckBig,
 	XCircle,
 	DollarSign,
+	Share2,
 	Zap
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
 	DropdownMenu,
 	DropdownMenuTrigger,
@@ -33,12 +35,15 @@ const NOTIFICATION_ICONS: Record<string, ReactElement> = {
 	INSTANCE_READY: <Zap className="w-3.5 h-3.5 text-emerald-600" />,
 	INSTANCE_CLOSED: <FileText className="w-3.5 h-3.5 text-slate-500" />,
 	PAYMENT_RECEIVED: <DollarSign className="w-3.5 h-3.5 text-orange-600" />,
+	DOCUMENT_SHARED: <Share2 className="w-3.5 h-3.5 text-violet-600" />,
 };
 
-const NotificationItem = ({ notification, onRead }: { notification: Notification; onRead: (id: string) => void }) => (
+const REQUEST_NOTIFICATION_TYPES = new Set(['OPERATION_REQUEST_CREATED', 'OPERATION_REQUEST_APPROVED', 'OPERATION_REQUEST_REJECTED']);
+
+const NotificationItem = ({ notification, onRead, onNavigate }: { notification: Notification; onRead: (id: string) => void; onNavigate: (n: Notification) => void }) => (
 	<button
 		type="button"
-		onClick={() => !notification.isRead && onRead(String(notification.id))}
+		onClick={() => { if (!notification.isRead) onRead(String(notification.id)); onNavigate(notification); }}
 		className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors cursor-pointer rounded-md ${
 			notification.isRead ? 'opacity-55' : 'hover:bg-black/3'
 		}`}
@@ -72,6 +77,7 @@ const NotificationItem = ({ notification, onRead }: { notification: Notification
 
 const NotificationsPopover = (): ReactElement => {
 	const [open, setOpen] = useState(false);
+	const navigate = useNavigate();
 	const {
 		notifications,
 		unreadCount,
@@ -95,6 +101,15 @@ const NotificationsPopover = (): ReactElement => {
 	const handleMarkAllAsRead = useCallback(() => {
 		markAllAsRead();
 	}, [markAllAsRead]);
+
+	const handleNavigate = useCallback((n: Notification) => {
+		setOpen(false);
+		if (REQUEST_NOTIFICATION_TYPES.has(n.type)) {
+			navigate('/workspace?view=requests');
+		} else if (n.instance?.id) {
+			navigate(`/workspace/detail/${n.instance.id}`);
+		}
+	}, [navigate]);
 
 	return (
 		<DropdownMenu open={open} onOpenChange={handleOpen}>
@@ -153,6 +168,7 @@ const NotificationsPopover = (): ReactElement => {
 								key={n.id}
 								notification={n}
 								onRead={handleMarkAsRead}
+								onNavigate={handleNavigate}
 							/>
 						))
 					)}

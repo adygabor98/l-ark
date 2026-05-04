@@ -22,7 +22,7 @@ import {
     StepType,
     type ApiResponse
 } from '@l-ark/types';
-import SharedDocumentsPanel from '../shared-documents-panel';
+import ClosureShareBackDialog from './closure-share-back-dialog';
 import {
     getStepCompletionBlockers
 } from '../../utils/my-workspace.utils';
@@ -59,6 +59,8 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     const { onToast } = useToast();
     /** State to display the user choice section */
     const [showBranchChoice, setShowBranchChoice] = useState(false);
+    /** Pending payment status awaiting share-back confirmation */
+    const [pendingClosure, setPendingClosure] = useState<string | null>(null);
 
 	if ( !selectedStepInstance || !selectedBlueprintStep ) {
 		return (
@@ -102,21 +104,13 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     const uploadsMissing = expectedDocCount > 0 && localUploads < plainCheckedCount;
     const docUploadBlocked = expectedDocCount > 0 && (!allChecked || uploadsMissing);
     /**
-     * Closure-time peers — every operation B is connected to (parents launched via
-     * OPEN_OPERATION, GLOBAL_OTHER links from Request Global Operation, OTHER_OTHER
-     * links). For each peer we render a SharedDocumentsPanel so the user can hand off
-     * forms / files alongside closure. Both directions of the link surface here so a
-     * sub-op can share back UP to its parent.
+     * DEPENDS_ON parent links — the operations that launched this one. When the
+     * user closes the operation we surface a blocking dialog so they can pick
+     * which forms / docs to share back with each parent.
      */
-    const SHAREABLE_LINK_TYPES: LinkType[] = [LinkType.DEPENDS_ON, LinkType.GLOBAL_OTHER, LinkType.OTHER_OTHER];
-    const closurePeerLinks = [
-        ...((instance?.sourceLinks ?? []) as any[])
-            .filter(l => SHAREABLE_LINK_TYPES.includes(l.linkType) && l.targetInstance)
-            .map(l => ({ link: l, counterpartTitle: l.targetInstance?.title })),
-        ...((instance?.targetLinks ?? []) as any[])
-            .filter(l => SHAREABLE_LINK_TYPES.includes(l.linkType) && l.sourceInstance)
-            .map(l => ({ link: l, counterpartTitle: l.sourceInstance?.title })),
-    ];
+    const closureParentLinks = ((instance?.sourceLinks ?? []) as any[])
+        .filter(l => (l.linkType === LinkType.DEPENDS_ON || l.linkType === LinkType.GLOBAL_OTHER) && l.targetInstance)
+        .map(l => ({ linkId: l.id as number, counterpartTitle: l.targetInstance?.title as string }));
 
     /** Retrieve to get the step type */
     const stepType = selectedBlueprintStep.stepType ?? StepType.STANDARD;
@@ -152,10 +146,32 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
     }
 
     const onPayment = async (payStatus: string): Promise<void> => {
-        // Document sharing is handled inline via SharedDocumentsPanel above (which
-        // persists InstanceLinkSharedDocument rows + DocumentAccessGrants on each Add),
-        // so closure just transitions the instance status here.
-        const response: FetchResult<{ data: ApiResponse }> = await closeOperation({ input: { instanceId: String(instance?.id), paymentStatus: payStatus } });
+        // If this op was launched by one or more parent operations (DEPENDS_ON),
+        // ask the user what to share back before transitioning the status.
+        if (closureParentLinks.length > 0) {
+            setPendingClosure(payStatus);
+            return;
+        }
+        await runClosure(payStatus, []);
+    }
+
+    /** Actually performs the close + share-back round trip. */
+    const runClosure = async (
+        payStatus: string,
+        sharePayload: { sharedFormInstanceIds: number[]; sharedDocumentIds: number[] } | [],
+    ): Promise<void> => {
+        const shareBack = Array.isArray(sharePayload)
+            ? []
+            : closureParentLinks.map(p => ({
+                parentLinkId: String(p.linkId),
+                formInstanceIds: sharePayload.sharedFormInstanceIds.map(String),
+                documentIds: sharePayload.sharedDocumentIds.map(String),
+            }));
+        const response: FetchResult<{ data: ApiResponse }> = await closeOperation({ input: {
+            instanceId: String(instance?.id),
+            paymentStatus: payStatus,
+            ...(shareBack.length > 0 ? { shareBack } : {}),
+        } as any });
         // Mark the step completed directly — skipping handleStepStatusChange which would
         // overwrite the payment status (PARTIALLY_CLOSED etc.) with COMPLETED_READY.
         await updateStepInstance({ id: selectedStepInstance.id, input: { status: StepInstanceStatus.COMPLETED } });
@@ -227,23 +243,6 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
             {/* Closure: payment decision */}
             { stepType === StepType.CLOSURE && instance?.status !== OperationInstanceStatus.CLOSED ?
                 <>
-                    { closurePeerLinks.length > 0 &&
-                        <div className="space-y-2 mb-3">
-                            <p className="text-[11px] font-[Lato-Bold] text-black/60 uppercase tracking-wide">
-                                Share documents with linked operations
-                            </p>
-                            { closurePeerLinks.map(({ link, counterpartTitle }) => (
-                                <SharedDocumentsPanel
-                                    key={`closure-share-${link.id}`}
-                                    instanceLinkId={link.id}
-                                    sharedDocuments={link.sharedDocuments ?? []}
-                                    counterpartTitle={counterpartTitle}
-                                    mode="owner"
-                                />
-                            ))}
-                        </div>
-                    }
-
                     <p className="text-sm font-[Lato-Bold] text-black/60 mt-5 mb-5"> Close this operation: </p>
                     <div className='flex flex-col gap-3'>
                         { paymentTypes.map(payStatus => {
@@ -330,6 +329,17 @@ const InstanceFooterStep = (props: PropTypes): ReactElement => {
                         Mark Step as Complete
                     </Button>
                 </div>
+            }
+
+            {/* Closure share-back dialog (only when this op has DEPENDS_ON parents) */}
+            { pendingClosure && closureParentLinks.length > 0 &&
+                <ClosureShareBackDialog
+                    isOpen={!!pendingClosure}
+                    onClose={() => setPendingClosure(null)}
+                    parentLinks={closureParentLinks}
+                    onConfirm={async (payload) => { await runClosure(pendingClosure, payload); setPendingClosure(null); }}
+                    onSkip={async () => { await runClosure(pendingClosure, []); setPendingClosure(null); }}
+                />
             }
         </div>
     );

@@ -24,15 +24,17 @@ interface PropTypes {
     options?: PermissionCheckOptions;
     /** Where to redirect if not authenticated. Default: '/' */
     loginRedirect?: string;
+    /** Role codes that are explicitly forbidden from this route. Takes precedence over permission checks. */
+    deniedRoles?: string[];
 }
 
 const ProtectedRoute = (props: PropTypes): ReactElement => {
     /** Retrieve component properties */
-    const { children, permissions, options = {}, loginRedirect = '/'} = props;
+    const { children, permissions, options = {}, loginRedirect = '/', deniedRoles } = props;
     /** Location utilities */
     const location = useLocation();
     /** Permissions utilities */
-    const { isAuthenticated, canAccessRoute } = usePermissions();
+    const { isAuthenticated, canAccessRoute, user } = usePermissions();
 
     // Check authentication first
     if (!isAuthenticated) {
@@ -44,6 +46,11 @@ const ProtectedRoute = (props: PropTypes): ReactElement => {
                 replace
             />
         );
+    }
+
+    // Hard-deny by role (e.g. ADM cannot access /workspace or /operations).
+    if (deniedRoles && user?.role?.code && deniedRoles.includes(user.role.code)) {
+        return <Unauthorized />;
     }
 
     // Check permissions if specified

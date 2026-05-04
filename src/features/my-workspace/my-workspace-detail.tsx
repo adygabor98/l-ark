@@ -1,4 +1,5 @@
 import {
+    useEffect,
     useState,
     type ReactElement
 } from 'react';
@@ -21,7 +22,6 @@ import MyWorkspaceInstanceDetailStepFocus from './components/my-workspace-step-f
 import MyWorkspaceInstanceRightPanel from './components/my-workspace-instance-right-panel';
 import { WorkspaceErrorBoundary } from './components/workspace-error-boundary';
 import WorkspaceDetailSkeleton from './components/workspace-detail-skeleton';
-import SharedDocumentsPanel, { getOriginInstanceId, type SharedDocumentRow } from './components/shared-documents-panel';
 
 const MyWorkspaceDetailInner = (): ReactElement => {
     /** User api utilities */
@@ -39,6 +39,19 @@ const MyWorkspaceDetailInner = (): ReactElement => {
     /** State to manage the displayment of the panel */
     const [contextPanelOpen, setContextPanelOpen] = useState<boolean>(true);
 
+    /** Keyboard shortcut: "]" toggles the right context panel.
+     *  Ignored while typing in inputs / textareas / contenteditable areas. */
+    useEffect(() => {
+        const handler = (e: KeyboardEvent): void => {
+            if ( e.key !== ']' || e.metaKey || e.ctrlKey || e.altKey ) return;
+            const t = e.target as HTMLElement | null;
+            if ( t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable) ) return;
+            setContextPanelOpen(p => !p);
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     if ( loading ) {
         return <WorkspaceDetailSkeleton />;
     }
@@ -52,32 +65,10 @@ const MyWorkspaceDetailInner = (): ReactElement => {
     }
 
     /**
-     * Header only surfaces docs that came INTO this op from another. For DEPENDS_ON links,
-     * the parent op (we appear as targetInstance) already has the OPEN_OPERATION step (outgoing)
-     * and WAIT step (incoming) covering both sides — so skip those here. For the sub op
-     * (we appear as sourceInstance) there is no equivalent step, so keep DEPENDS_ON
-     * in the header so the sub can see what the parent shared with it.
+     * Incoming + outgoing shared-document panels are rendered inside the
+     * right context panel "Shared" tab now (see MyWorkspaceInstanceRightPanel)
+     * so the header no longer expands vertically with long shared lists.
      */
-    const incomingLinks = [
-        ...(instance.sourceLinks ?? []).map((l: any) => ({
-            id: l.id,
-            counterpartTitle: l.targetInstance?.title,
-            rows: (l.sharedDocuments ?? []) as SharedDocumentRow[],
-            skip: false,
-        })),
-        ...(instance.targetLinks ?? []).map((l: any) => ({
-            id: l.id,
-            counterpartTitle: l.sourceInstance?.title,
-            rows: (l.sharedDocuments ?? []) as SharedDocumentRow[],
-            skip: l.linkType === 'DEPENDS_ON',
-        })),
-    ].filter(l =>
-        !l.skip &&
-        l.rows.some(r => {
-            const origin = getOriginInstanceId(r);
-            return origin == null || origin !== instance.id;
-        })
-    );
 
     return (
         <div className="h-full flex flex-col">
@@ -91,26 +82,12 @@ const MyWorkspaceDetailInner = (): ReactElement => {
 				onToggleContextPanel={() => setContextPanelOpen(p => !p)}
 			/>
 
-			{ incomingLinks.length > 0 &&
-				<div className="px-3 pb-2 space-y-2">
-					{ incomingLinks.map(l => (
-						<SharedDocumentsPanel
-							key={`incoming-${l.id}`}
-							instanceLinkId={l.id}
-							sharedDocuments={l.rows}
-							counterpartTitle={l.counterpartTitle}
-							mode="viewer"
-						/>
-					))}
-				</div>
-			}
-
 			<div className="flex-1 flex gap-3 min-h-0">
 				<MyWorkspaceInstanceDetailStepTimeline isReadOnly={isReadOnly} progress={progress} />
 
-				<div className="flex-1 min-w-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
+				<main className="flex-1 min-w-0 bg-white rounded-xl border border-black/6 shadow-sm overflow-hidden flex flex-col">
 					<MyWorkspaceInstanceDetailStepFocus isReadOnly={isReadOnly} />
-				</div>
+				</main>
 				{ contextPanelOpen && <MyWorkspaceInstanceRightPanel /> }
 			</div>
 		</div>

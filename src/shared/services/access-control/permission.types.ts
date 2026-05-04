@@ -39,4 +39,10 @@ export interface AuthenticatedUser {
         code: string;
         permissions: PermissionStructure;
     };
+    /** OfficeDivision rows the user manages (he is the director of). */
+    managedDivisions?: Array<{
+        id: number | string;
+        office: { id: number | string };
+        division: { id: number | string };
+    }>;
 }

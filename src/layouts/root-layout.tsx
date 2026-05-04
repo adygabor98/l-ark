@@ -11,6 +11,7 @@ import {
 	Inbox,
 	LayoutDashboard,
 	LayoutTemplate,
+	Share2,
 	Users
 } from 'lucide-react';
 import {
@@ -33,11 +34,12 @@ const RootLayout = ({ children }: { children: ReactElement }): ReactElement => {
 	const allNavItems = [
 		{ icon: LayoutDashboard, label: t('titles.dashboard'), href: "/dashboard", permissions: [] },
 		{ icon: Calendar, label: t('titles.agenda'), href: "/agenda", permissions: ['agenda.view_all', 'agenda.view_mine_and_sub', 'agenda.view_mine'] },
+		{ icon: Inbox, label: 'My Workspace', href: "/workspace", permissions: ['operations.view'] },
 		{ icon: Building2, label: t('titles.offices'), href: "/offices", permissions: ['offices.view'] },
 		{ icon: Briefcase, label: t('titles.divisions'), href: "/divisions", permissions: ['divisions.view'] },
 		{ icon: Users, label: t('titles.users'), href: "/users", permissions: ['users.view'] },
+		{ icon: Share2, label: t('titles.shared-with-me'), href: "/shared", permissions: [] },
 		{ icon: FolderCog, label: t('titles.operations'), href: "/operations", permissions: ['operations.view'] },
-		{ icon: Inbox, label: 'My Workspace', href: "/workspace", permissions: ['operations.view'] },
 		{ icon: LayoutTemplate, label: t('titles.templates'), href: "/templates", permissions: ['templates.view'] }
 	];
 

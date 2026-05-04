@@ -1,7 +1,9 @@
 import {
 	FormInstanceStatus,
 	OperationInstanceStatus,
+	OperationType,
 	StepInstanceStatus,
+	UserRole,
 	type BlueprintStep,
 	type OperationBlueprintDetail,
 	type OperationInstance,
@@ -9,6 +11,44 @@ import {
 } from "@l-ark/types";
 
 export type FilterStatus = 'ALL' | OperationInstanceStatus;
+
+/**
+ * Frontend mirror of backend `assertInstanceAccess` — used purely for UX gating
+ * (disabling rows / blocking navigation). Backend remains the source of truth
+ * and will return FORBIDDEN for any leak.
+ *
+ *  - DG  → always true.
+ *  - DIR → true if (officeId, divisionId) is one he manages, OR if he is
+ *          the assignee/creator/requester.
+ *  - C   → false for GLOBAL; otherwise true only if creator or assignee.
+ *  - else (ADM / unknown) → false.
+ */
+export const canOpenInstance = (user: { id?: number; role?: { code?: string }; managedDivisions?: Array<{ office?: { id: number | string }; division?: { id: number | string } }> } | null | undefined, instance: Pick<OperationInstance, 'officeId' | 'divisionId' | 'assignedTo' | 'createdById' | 'requestedById' | 'blueprint'> | null | undefined): boolean => {
+	if ( !user || !instance ) return false;
+
+	const role = user.role?.code;
+	const userId = user.id;
+
+	if ( role === UserRole.DG ) return true;
+
+	const isOwner = instance.assignedTo.id === userId || instance.createdById === userId || instance.requestedById === userId;
+
+	if ( role === UserRole.DIR ) {
+		const managed = user.managedDivisions ?? [];
+		const inScope = managed.some(d =>
+			String(d.office?.id) === String(instance.officeId) &&
+			String(d.division?.id) === String(instance.divisionId),
+		);
+		return inScope || isOwner;
+	}
+
+	if ( role === UserRole.C ) {
+		if ( instance.blueprint?.type === OperationType.GLOBAL ) return false;
+		return isOwner;
+	}
+
+	return false;
+};
 
 /** Status color mappings shared across workspace components */
 export const STEP_STATUS_COLORS = {

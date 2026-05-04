@@ -5,7 +5,8 @@ import {
 import {
     ArrowRight,
     ExternalLink,
-    Loader2
+    Loader2,
+    SendHorizonal
 } from 'lucide-react';
 import {
     useWorkspaceInstanceContext
@@ -22,8 +23,10 @@ import {
     UserRole
 } from '@l-ark/types';
 import LaunchOperationDialog from '../launch-operation-dialog/launch-operation-dialog';
-import SharedDocumentsPanel from '../shared-documents-panel';
 import usePermissions from '../../../../shared/hooks/usePermissions';
+import {
+    useToast
+} from '../../../../shared/hooks/useToast';
 
 interface PropTypes {
     isReadOnly: boolean;
@@ -35,10 +38,11 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const { user } = usePermissions();
     const { instance, blueprint, linkedGlobalInstances, linkedOtherInstances, selectedStepInstance, selectedBlueprintStep, dependsOnLinks, refreshInstance } = useWorkspaceInstanceContext();
-    const { executeOpenOperationStep } = useOperationInstance();
+    const { executeOpenOperationStep, createOperationRequest } = useOperationInstance();
+    const { onToast } = useToast();
     const navigate = useNavigate();
 
-    const openBlueprints = (selectedBlueprintStep?.openBlueprints ?? []) as unknown as { id: number; title: string; subType?: string; description?: string }[];
+    const openBlueprints = (selectedBlueprintStep?.openBlueprints ?? []) as unknown as { id: number; title: string; subType?: string; type?: string; description?: string }[];
     const stillAvailableInstances = blueprint?.type === OperationType.GLOBAL || (
         blueprint?.type === OperationType.OTHER &&
         (
@@ -52,8 +56,12 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
         )
     );
 
-    const handleLaunch = async (payload: {blueprintId: number; title: string; description: string; sharedFormInstanceIds: number[]; sharedDocumentIds: number[];}): Promise<void> => {
-        if ( !selectedStepInstance ) return;
+    const isCommercial = user?.role?.code === UserRole.C;
+    const hasGlobalTarget = openBlueprints.some(b => b.type === OperationType.GLOBAL);
+    const useRequestFlow = isCommercial && hasGlobalTarget;
+
+    const handleLaunch = async (payload: { blueprintId: number; title: string; description: string; sharedFormInstanceIds: number[]; sharedDocumentIds: number[] }): Promise<void> => {
+        if (!selectedStepInstance) return;
         setLoading(true);
         try {
             const response = await executeOpenOperationStep({
@@ -78,9 +86,29 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
         }
     };
 
+    const handleRequest = async (payload: { blueprintId: number; title: string; description: string; sharedFormInstanceIds: number[]; sharedDocumentIds: number[] }): Promise<void> => {
+        if (!instance?.id || !instance?.officeId) return;
+        setLoading(true);
+        try {
+            const response = await createOperationRequest({
+                input: {
+                    sourceInstanceId: instance.id,
+                    targetBlueprintId: payload.blueprintId,
+                    officeId: instance.officeId,
+                }
+            });
+            setDialogOpen(false);
+            if (response?.data?.data?.success) {
+                onToast({ message: 'Your request has been submitted and is awaiting director approval.', type: 'success' });
+            }
+            refreshInstance();
+        } finally {
+            setLoading(false);
+        }
+    };
+
     /** sourceLinks of an OPEN_OPERATION-launched sub are the parent's targetLinks with type DEPENDS_ON.
-     *  Map them to the InstanceLink rows so we can show + edit "documents shared with X". */
-    const dependsOnLinksWithShared = (instance?.targetLinks ?? []).filter((l: any) => l.linkType === 'DEPENDS_ON');
+     *  Sharing UI for these links lives in the right-panel "Shared" tab now. */
 
     const renderGlobalOpenedOperations = (): ReactElement => (
         <div className="flex-1">
@@ -114,10 +142,15 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
 
     const renderOpenNewOperation = (): ReactElement => (
         <div className="flex-1">
-            <p className="text-sm font-[Lato-Bold] text-neutral-700"> New Operation </p>
+            <p className="text-sm font-[Lato-Bold] text-neutral-700">
+                { useRequestFlow ? 'Request Global Operation' : 'New Operation' }
+            </p>
             <div className='flex items-center justify-between gap-3'>
                 <p className="text-xs font-[Lato-Regular] text-neutral-600/70 mt-0.5">
-                    Click to launch the sub-operation defined in the blueprint.
+                    { useRequestFlow
+                        ? 'Submit a request to the office director to launch this global operation.'
+                        : 'Click to launch the sub-operation defined in the blueprint.'
+                    }
                 </p>
                 { !isReadOnly &&
                     <Button
@@ -128,10 +161,15 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
                     >
                         { loading
                             ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            : <>
-                                Launch Sub-Operation
-                                <ArrowRight className="w-3.5 h-3.5" />
-                              </>
+                            : useRequestFlow
+                                ? <>
+                                    Request Global Operation
+                                    <SendHorizonal className="w-3.5 h-3.5" />
+                                  </>
+                                : <>
+                                    Launch Sub-Operation
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </>
                         }
                     </Button>
                 }
@@ -160,26 +198,15 @@ const InstanceOpenOperationStep = (props: PropTypes): ReactElement => {
                 </div>
             }
 
-            {/* Per-link "Documents shared" panel for the launching side */}
-            { dependsOnLinksWithShared.map((link: any) => (
-                <SharedDocumentsPanel
-                    key={`shared-${link.id}`}
-                    instanceLinkId={link.id}
-                    sharedDocuments={link.sharedDocuments ?? []}
-                    counterpartTitle={link.sourceInstance?.title}
-                    mode="owner"
-                />
-            ))}
-
             { dialogOpen &&
                 <LaunchOperationDialog
                     isOpen={dialogOpen}
                     onClose={() => setDialogOpen(false)}
                     blueprints={openBlueprints}
-                    headerTitle="Launch Sub-Operation"
-                    headerSubtitle="Configure the new sub-operation"
-                    submitLabel="Launch Sub-Operation"
-                    onSubmit={handleLaunch}
+                    headerTitle={ useRequestFlow ? 'Request Global Operation' : 'Launch Sub-Operation' }
+                    headerSubtitle={ useRequestFlow ? 'The director will review and approve this request' : 'Configure the new sub-operation' }
+                    submitLabel={ useRequestFlow ? 'Submit Request' : 'Launch Sub-Operation' }
+                    onSubmit={ useRequestFlow ? handleRequest : handleLaunch }
                 />
             }
         </div>

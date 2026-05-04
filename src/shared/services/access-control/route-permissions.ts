@@ -56,6 +56,9 @@ export const ROUTE_PERMISSIONS: Record<string, RoutePermissionConfig> = {
     '/workspace/new': { permissions: 'operations.view' },
     '/workspace/detail/:id': { permissions: 'operations.view' },
 
+    // Documents shared with the current user — auth only
+    '/shared': {},
+
     // Templates
     '/templates': { permissions: 'templates.view' },
     '/templates/builder': { permissions: 'templates.view' },

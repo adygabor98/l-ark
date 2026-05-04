@@ -122,7 +122,13 @@ export const useToast = () => {
 
     const onToast = (data: ToastData): void => {
         const { message, type = 'info' } = data;
-        sileo[type]({ title: message });
+        let id: string;
+        id = sileo[type]({
+            title: message,
+            duration: null,
+            autopilot: true,
+            button: { title: '✕  Close', onClick: () => sileo.dismiss(id) },
+        });
     };
 
     const onConfirmationToast = (data: ToastConfirmationData): Promise<{ confirmed: boolean; secondary: boolean; dismiss: () => void }> => {

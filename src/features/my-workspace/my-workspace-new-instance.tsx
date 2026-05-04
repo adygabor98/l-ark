@@ -19,6 +19,7 @@ import {
     OperationBlueprintStatus,
     OperationInstanceStatus,
     OperationType,
+    UserRole,
     type ApiResponse,
     type OperationBlueprint,
     type OperationInstance,
@@ -68,8 +69,20 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     const { instances, retrieveInstances, createInstance, linkInstances } = useOperationInstance();
     /** Office api utilities */
     const { officesUser, retrieveOfficeByUser } = useOffice();
-    /** Types of blueprints */
-    const types: OperationType[] = [OperationType.OTHER, OperationType.GLOBAL];
+    /** Role-aware blueprint type tabs:
+     *  - Commercials cannot start GLOBAL operations directly (backend forbids).
+     *  - Directors and Director General can pick either type.
+     */
+    const roleCode = user?.role?.code;
+    const types: OperationType[] = roleCode === UserRole.C
+        ? [OperationType.OTHER]
+        : [OperationType.OTHER, OperationType.GLOBAL];
+    /** Set of division ids the current DIR manages — used to restrict the
+     *  list of GLOBAL blueprints he is allowed to launch. */
+    const managedDivisionIds = useMemo<Set<string>>(() => {
+        const list = (user as any)?.managedDivisions ?? [];
+        return new Set(list.map((d: any) => String(d.division?.id)));
+    }, [user]);
     /** Formulary definition */
     const methods = useForm<{ type: OperationType, officeId: number | null, blueprintId: number | null, title: string, description: string }>({
         mode: 'onChange',
@@ -84,12 +97,21 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     const activeType = methods.watch('type');
     const officeId = methods.watch('officeId');
     const blueprintId = methods.watch('blueprintId');
-    /** List of blueprints filtered by active type */
-    const filteredBlueprints = blueprints.filter(op =>
-        op.type === activeType
-        && op.status !== OperationBlueprintStatus.DRAFT
-        && op.status !== OperationBlueprintStatus.ARCHIVED
-    );
+    /** List of blueprints filtered by active type and the current user's
+     *  permission to instantiate them. Mirrors backend
+     *  `assertCanCreateBlueprintInstance`. */
+    const filteredBlueprints = blueprints.filter(op => {
+        if ( op.type !== activeType ) return false;
+        if ( op.status === OperationBlueprintStatus.DRAFT ) return false;
+        if ( op.status === OperationBlueprintStatus.ARCHIVED ) return false;
+
+        if ( roleCode === UserRole.C && op.type === OperationType.GLOBAL ) return false;
+
+        if ( roleCode === UserRole.DIR && op.type === OperationType.GLOBAL ) {
+            return managedDivisionIds.has(String((op as any).divisionId));
+        }
+        return true;
+    });
     /** State to manage the selected prerequisite instance IDs */
 	const [prereqInstanceIds, setPrereqInstanceIds] = useState<Record<number, number | null>>({});
     /** Prerequisites for the selected GLOBAL blueprint */

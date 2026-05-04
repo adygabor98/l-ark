@@ -26,7 +26,7 @@ import type {
 } from '@l-ark/types';
 import PermissionRow from './permission-row';
 
-const RoleDefinitionGrid = ({ roles }: { roles: Array<Role> }): ReactElement => {
+const RoleDefinitionGrid = ({ roles, canEdit = true }: { roles: Array<Role>; canEdit?: boolean }): ReactElement => {
 	
 	/** Manage to sort the roles by id */
 	const sortedRoles = [...roles].sort((a: Role, b: Role) => a.id - b.id);
@@ -76,7 +76,7 @@ const RoleDefinitionGrid = ({ roles }: { roles: Array<Role> }): ReactElement => 
 									</span>
 								</AccordionTrigger>
 								<AccordionContent className="pb-0!">
-									{ perms.map((perm) => <PermissionRow key={perm.key} permission={perm} roles={sortedRoles} /> ) }
+									{ perms.map((perm) => <PermissionRow key={perm.key} permission={perm} roles={sortedRoles} canEdit={canEdit} /> ) }
 								</AccordionContent>
 							</AccordionItem>
 						);

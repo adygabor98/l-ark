@@ -120,3 +120,23 @@ export const MANAGE_SHARED_DOCUMENTS = gql`
         }
     }
 `;
+
+export const CREATE_OPERATION_REQUEST = gql`
+    ${API_OPERATION_RESPONSE}
+
+    mutation gqlCreateOperationRequest($input: CreateOperationRequestInput!) {
+        data: gqlCreateOperationRequest(input: $input) {
+            ...OperationApiResponse
+        }
+    }
+`;
+
+export const HANDLE_OPERATION_REQUEST = gql`
+    ${API_OPERATION_RESPONSE}
+
+    mutation gqlHandleOperationRequest($input: HandleOperationRequestInput!) {
+        data: gqlHandleOperationRequest(input: $input) {
+            ...OperationApiResponse
+        }
+    }
+`;

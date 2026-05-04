@@ -98,6 +98,20 @@ const errorLink = onError((errorResponse) => {
                 return;
             }
 
+            // Forbidden access — surface the user to the unauthorized page.
+            // Avoid hijacking the app on routine permission probes from list
+            // queries by routing only when the failure originated from a detail
+            // / mutation path (single-record loads or write operations).
+            if (extensions?.code === 'FORBIDDEN') {
+                const opName = operation.operationName ?? '';
+                const isDetailOrMutation =
+                    /detail|byId|ById$|create|update|delete|launch|complete|publish|archive|restore|grant/i.test(opName);
+                if (isDetailOrMutation) {
+                    navigateTo('/unauthorized');
+                    return;
+                }
+            }
+
             // Handle authentication errors and token expiration for all other operations
             if (isAuthError(message, extensions?.code)) {
                 if (!isRefreshing) {

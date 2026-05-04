@@ -4,7 +4,8 @@ import {
     type SetStateAction
 } from 'react';
 import {
-    OperationInstanceStatus
+    OperationInstanceStatus,
+    UserRole
 } from '@l-ark/types';
 import type {
     FilterStatus
@@ -15,16 +16,22 @@ import {
 } from 'lucide-react';
 import Button from '../../../shared/components/button';
 
+type WorkspaceView = 'instances' | 'requests';
+
 interface PropTypes {
     filterStatus: FilterStatus;
-
     setFilterStatus: Dispatch<SetStateAction<FilterStatus>>;
     goToNewInstance: () => void;
+    view: WorkspaceView;
+    setView: (v: WorkspaceView) => void;
+    user: any;
+    pendingCount?: number;
 }
 
 const MyWorkspaceHeader = (props: PropTypes): ReactElement => {
-    /** Retrieve component utilities */
-    const { filterStatus, setFilterStatus, goToNewInstance } = props;
+    const { filterStatus, setFilterStatus, goToNewInstance, view, setView, user, pendingCount } = props;
+
+    const canSeeRequests = user?.role?.code === UserRole.DIR || user?.role?.code === UserRole.DG;
 
     /** Filter definitions */
     const filterOptions: { label: string; value: FilterStatus }[] = [
@@ -47,25 +54,58 @@ const MyWorkspaceHeader = (props: PropTypes): ReactElement => {
                         Track and manage your operation instances across all workflows.
                     </p>
                 </div>
-                <Button variant="primary" onClick={goToNewInstance}>
-                    <Plus className="w-5 h-5" />
-                    New Instance
-                </Button>
+                { view === 'instances' &&
+                    <Button variant="primary" onClick={goToNewInstance}>
+                        <Plus className="w-5 h-5" />
+                        New Instance
+                    </Button>
+                }
             </div>
 
-            {/* Filter bar */}
-            <div className="flex items-center gap-2 mt-3">
-                <Filter className="w-4 h-4 text-black/30" />
-                { filterOptions.map((opt) =>
-                    <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-[Lato-Bold] transition-all duration-200 cursor-pointer ${
-                            filterStatus === opt.value ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-white text-black/50 hover:bg-black/4 border border-black/6'
+            {/* View tabs for DIR/DG */}
+            { canSeeRequests &&
+                <div className="flex items-center gap-1 mt-4 border-b border-black/6">
+                    <button onClick={() => setView('instances')}
+                        className={`px-4 py-2 text-sm font-[Lato-Bold] transition-all duration-200 cursor-pointer border-b-2 -mb-px ${
+                            view === 'instances'
+                                ? 'border-primary text-black'
+                                : 'border-transparent text-black/40 hover:text-black/60'
                         }`}
                     >
-                        { opt.label }
+                        Operations
                     </button>
-                )}
-            </div>
+                    <button onClick={() => setView('requests')}
+                        className={`px-4 py-2 text-sm font-[Lato-Bold] transition-all duration-200 cursor-pointer border-b-2 -mb-px flex items-center gap-1.5 ${
+                            view === 'requests'
+                                ? 'border-primary text-black'
+                                : 'border-transparent text-black/40 hover:text-black/60'
+                        }`}
+                    >
+                        Requests
+                        {(pendingCount ?? 0) > 0 && (
+                            <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-[Lato-Bold]">
+                                {(pendingCount ?? 0) > 99 ? '99+' : pendingCount}
+                            </span>
+                        )}
+                    </button>
+                </div>
+            }
+
+            {/* Filter bar — only shown on instances view */}
+            { view === 'instances' &&
+                <div className="flex items-center gap-2 mt-3">
+                    <Filter className="w-4 h-4 text-black/30" />
+                    { filterOptions.map((opt) =>
+                        <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-[Lato-Bold] transition-all duration-200 cursor-pointer ${
+                                filterStatus === opt.value ? 'bg-primary text-primary-foreground shadow-sm' : 'bg-white text-black/50 hover:bg-black/4 border border-black/6'
+                            }`}
+                        >
+                            { opt.label }
+                        </button>
+                    )}
+                </div>
+            }
         </div>
     );
 }
