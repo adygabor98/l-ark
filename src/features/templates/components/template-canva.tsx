@@ -1,6 +1,7 @@
 import {
     type ReactElement,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     ChevronLeft,
     ChevronRight,
@@ -54,6 +55,8 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
     const { setActiveSectionId, setSelectedFieldId, deleteSection, addSection, deleteField, duplicateField } = props;
     /** Get control and mutation methods from form context */
     const { control, getValues, setValue } = useFormContext();
+    /** Translation utilities */
+    const { t } = useTranslation();
     /** Manage to retrieve the section by his identifier */
     const getSectionId = (): number => sections.findIndex(section => section.id === activeSectionId);
     /** Field IDs for SortableContext */
@@ -121,7 +124,7 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
                                     />
                                 }
                                 <span className={`relative z-10 ${isActive ? "text-white" : "text-black/60 hover:text-black"}`}>
-                                    { idx + 1 }. { section.title || "Section" }
+                                    { idx + 1 }. { section.title || t('section.untitled') }
                                 </span>
 
                                 {/* Field count badge */}
@@ -145,7 +148,7 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
                     })}
 
                     <Button variant='primary' onClick={addSection}>
-                        <Plus className="w-4 h-4" /> Add
+                        <Plus className="w-4 h-4" /> { t('buttons.add') }
                     </Button>
                 </div>
 
@@ -163,15 +166,15 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
                         <div className="flex flex-col gap-3 h-[calc(100%-30px)] glass-panel rounded-xl p-4 mt-5">
                             {/* Section Settings inline (update template information) */}
                             <div className="flex flex-col gap-2">
-                                <Field control={control} name={`sections.${getSectionId()}.title`} label={ 'Section Title' } type='text' required />
-                                <Field control={control} name={`sections.${getSectionId()}.description`} label={ 'Section Description' } type='textarea' />
+                                <Field control={control} name={`sections.${getSectionId()}.title`} label={ t('section.title-label') } type='text' required />
+                                <Field control={control} name={`sections.${getSectionId()}.description`} label={ t('section.description-label') } type='textarea' />
                             </div>
 
                             {/* Fields List */}
                             <div className="flex flex-col gap-4 min-h-50">
                                 {/* Section divider with field count */}
                                 <div className="flex items-center gap-3">
-                                    <span className='text-xs font-[Lato-Bold] text-black/40 uppercase tracking-widest'> Fields </span>
+                                    <span className='text-xs font-[Lato-Bold] text-black/40 uppercase tracking-widest'> { t('section.fields-label') } </span>
                                     <span className="text-[10px] font-[Lato-Bold] text-black/40 bg-black/4 px-2 py-0.5 rounded-md">
                                         { activeSection.fields.length }
                                     </span>
@@ -181,8 +184,8 @@ const TemplateCanva = (props: PropTypes): ReactElement => {
                                 { activeSection.fields.length === 0 ?
                                     <div className="h-48 flex flex-col items-center justify-center text-black/30 border-2 border-dashed rounded-2xl border-black/8 bg-linear-to-b from-black/1 to-black/3 transition-colors hover:border-black/12">
                                         <LayoutTemplate className="w-12 h-12 mb-4 opacity-30" strokeWidth={1} />
-                                        <p className="text-sm font-[Lato-Bold] text-black/40 mb-1"> No fields yet </p>
-                                        <p className="text-xs font-[Lato-Regular] text-black/25"> Click a component from the left panel to add one </p>
+                                        <p className="text-sm font-[Lato-Bold] text-black/40 mb-1"> { t('section.no-fields') } </p>
+                                        <p className="text-xs font-[Lato-Regular] text-black/25"> { t('section.no-fields-hint') } </p>
                                     </div>
                                 :
                                     <DndContext onDragEnd={handleDragEnd} collisionDetection={closestCenter}>

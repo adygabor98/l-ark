@@ -24,6 +24,7 @@ import {
 	DropdownMenuSeparator
 } from "./dropdown-button";
 import { useNotification } from "../../server/hooks/useNotification";
+import { useSocketEvents } from "../hooks/useSocketEvents";
 //import { formatRelativeDate } from "../../features/workspace-old/workspace.utils";
 import type { Notification } from "@l-ark/types";
 
@@ -83,9 +84,12 @@ const NotificationsPopover = (): ReactElement => {
 		unreadCount,
 		loading,
 		retrieveNotifications,
+		refetchUnreadCount,
 		markAsRead,
 		markAllAsRead
 	} = useNotification();
+
+	useSocketEvents('refresh-notifications-event', refetchUnreadCount);
 
 	const handleOpen = useCallback((isOpen: boolean) => {
 		setOpen(isOpen);

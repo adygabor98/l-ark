@@ -10,6 +10,9 @@ import {
 import {
     useForm
 } from 'react-hook-form';
+import {
+    useTranslation
+} from 'react-i18next';
 import type {
     FileTemplateSummary,
     OperationBlueprintStepInput
@@ -45,6 +48,8 @@ interface PropTypes {
 const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElement => {
     /** Retrieve component properties */
     const { step, onUpdate, onClose, onDelete } = props;
+    /** Translation utilities */
+    const { t } = useTranslation();
     /** File template api utilities */
     const { fileTemplates, retrieveFileTemplates } = useFileTemplate();
     /** Definition of the formulary */
@@ -166,7 +171,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
         <div className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
                 <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest">
-                    File Templates Linked
+                    { t('steps.file-templates-label') }
                 </label>
                 <span className="text-[10px] font-[Lato-Bold] text-black/30 bg-black/4 px-1.5 py-0.5 rounded-full">
                     { step.fileTemplateConfigs.length }
@@ -175,13 +180,13 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 
             <Button variant="secondary" size="sm" onClick={() => setLinkModalOpen(true)} className="w-full">
                 <Link2 className="w-3.5 h-3.5" />
-                Link New
+                { t('steps.link-new') }
             </Button>
 
             {/* Linked templates list */}
             { !step.fileTemplateConfigs || step.fileTemplateConfigs.length === 0 ?
                 <p className="text-xs font-[Lato-Regular] text-black/30 italic text-center py-2">
-                    No file templates linked
+                    { t('steps.no-file-templates') }
                 </p>
             :
                 <div className="flex flex-col gap-1.5">
@@ -213,7 +218,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                                             </div>
                                             <Copy className="w-2.5 h-2.5 text-black/25" />
                                             <span className="text-[10px] font-[Lato-Regular] text-black/45 group-hover/multi:text-black/70 transition-colors">
-                                                Multiple
+                                                { t('steps.multiple') }
                                             </span>
                                         </button>
 
@@ -230,7 +235,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                                             </div>
                                             <CircleDot className="w-2.5 h-2.5 text-black/25" />
                                             <span className="text-[10px] font-[Lato-Regular] text-black/45 group-hover/opt:text-black/70 transition-colors">
-                                                Optional
+                                                { t('steps.optional') }
                                             </span>
                                         </button>
                                     </div>
@@ -239,7 +244,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
                                     <button onClick={() => handleUnlinkTemplate(config.templateId)} className="flex items-center gap-1 text-black/30 hover:text-red-500 transition-colors cursor-pointer group/unlink">
                                         <Unlink className="w-3 h-3" />
                                         <span className="text-[10px] font-[Lato-Regular] group-hover/unlink:text-red-500 transition-colors">
-                                            Unlink
+                                            { t('steps.unlink') }
                                         </span>
                                     </button>
                                 </div>
@@ -259,7 +264,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 					<div className="flex h-6 w-6 items-center justify-center rounded-lg bg-amber-50">
 						<Settings className="w-3 h-3 text-amber-700" />
 					</div>
-					<h3 className="text-sm font-[Lato-Bold] text-black/80"> Step Settings </h3>
+					<h3 className="text-sm font-[Lato-Bold] text-black/80"> { t('steps.settings-title') } </h3>
 				</div>
 				<div className="flex items-center gap-1">
 					<button onClick={() => onClose(null)} className="flex h-7 w-7 items-center justify-center rounded-lg text-black/30 hover:bg-red-50 hover:text-red-500 transition-all duration-200 cursor-pointer">
@@ -270,19 +275,19 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 
 			{/* Body */}
 			<div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Title </label>
-				<Field control={control} name="title" type="text" placeholder="Step title..." required />
+                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('steps.title-label') } </label>
+				<Field control={control} name="title" type="text" placeholder={ t('steps.title-placeholder') } required />
 
-                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Description </label>
-				<Field control={control} name="description" type="textarea" placeholder="What happens in this step..." />
+                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('steps.description-label') } </label>
+				<Field control={control} name="description" type="textarea" placeholder={ t('steps.description-placeholder') } />
 
-                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Step Type </label>
+                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('steps.type-label') } </label>
                 <Field control={control} name='stepType' type='select' dataType='blueprint-step-types' required />
 
 				{/* Open Blueprints — only when stepType is OPEN_OPERATION */}
 				{ stepType === StepTypeEnum.OPEN_OPERATION &&
                     <>
-                        <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Which blueprints can open? </label>
+                        <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('steps.which-blueprints') } </label>
                         <Field control={control} name='openBlueprintIds' type='select' dataType='blueprints' multiple required />
                     </>
                 }
@@ -291,14 +296,14 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 				{ stepType === StepTypeEnum.NOTIFICATION &&
 					<div className="flex flex-col gap-2 p-3 rounded-xl bg-amber-50/50 border border-amber-200/60">
 						<div className="flex items-center gap-2 mb-1">
-							<label className="text-[11px] font-[Lato-Bold] text-amber-700 uppercase tracking-widest"> Notification Persons </label>
+							<label className="text-[11px] font-[Lato-Bold] text-amber-700 uppercase tracking-widest"> { t('steps.notification-persons') } </label>
 						</div>
-						<Field control={control} name="notificationPersons" type="textarea" placeholder="e.g. Bank, Notaria, Compradors" simple />
-						<p className="text-[10px] font-[Lato-Regular] text-amber-600/70"> Comma-separated values. Each person will appear as a checkbox item when the step is active. </p>
+						<Field control={control} name="notificationPersons" type="textarea" placeholder={ t('steps.notification-placeholder') } simple />
+						<p className="text-[10px] font-[Lato-Regular] text-amber-600/70"> { t('steps.notification-hint') } </p>
 					</div>
 				}
 
-                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> When is this step visible? </label>
+                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('steps.visibility-label') } </label>
                 <Field control={control} name='conditionalVisibility' type='select' dataType='blueprint-conditional-visibility' />
 
 				{/* File Templates Linked */}
@@ -308,29 +313,29 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 				<div className="h-px bg-linear-to-r from-transparent via-black/8 to-transparent" />
 
 				{/* Toggles */}
-                <Field control={control} name='isBlocking' label={ 'Blocking' } type='toggle-switch' placeholder="Next step can't start until this completes" />
-                <Field control={control} name='isRequired' label={ 'Required' } type='toggle-switch' placeholder="This step cannot be skipped" />
-                <Field control={control} name='allowDocumentUpload' label={ 'Upload Documents' } type='toggle-switch' placeholder="Users can upload documents in this step" />
+                <Field control={control} name='isBlocking' label={ t('steps.blocking-label') } type='toggle-switch' placeholder={ t('steps.blocking-hint') } />
+                <Field control={control} name='isRequired' label={ t('steps.required-label') } type='toggle-switch' placeholder={ t('steps.required-hint') } />
+                <Field control={control} name='allowDocumentUpload' label={ t('steps.upload-docs-label') } type='toggle-switch' placeholder={ t('steps.upload-docs-hint') } />
 
                 { allowDocumentUpload &&
 					<div className="flex flex-col gap-2 p-3 rounded-xl bg-green-50/50 border border-green-200/60">
 						<div className="flex items-center gap-2 mb-1">
-							<label className="text-[11px] font-[Lato-Bold] text-green-700 uppercase tracking-widest"> Expected Documents </label>
+							<label className="text-[11px] font-[Lato-Bold] text-green-700 uppercase tracking-widest"> { t('steps.expected-docs-label') } </label>
 						</div>
-                        <Field control={control} name="expectedDocuments" type="textarea" placeholder="e.g. DNI (front), Passport" simple />
-                        <p className="text-[10px] font-[Lato-Regular] text-green-600/70"> Comma-separated values. Each document will appear as a checkbox item when the step is active. </p>
+                        <Field control={control} name="expectedDocuments" type="textarea" placeholder={ t('steps.expected-docs-placeholder') } simple />
+                        <p className="text-[10px] font-[Lato-Regular] text-green-600/70"> { t('steps.expected-docs-hint') } </p>
 					</div>
 				}
 
-                <Field control={control} name='allowInstanceLink' label={ 'Allow Instance Link' } type='toggle-switch' placeholder="User can choose to link this step to an existing instance or proceed without linking" />
+                <Field control={control} name='allowInstanceLink' label={ t('steps.allow-link-label') } type='toggle-switch' placeholder={ t('steps.allow-link-hint') } />
 
                 { allowInstanceLink &&
                     <div className="flex flex-col gap-2 p-3 rounded-xl bg-blue-50/50 border border-blue-200/60">
                         <div className="flex items-center gap-2 mb-1">
-                            <label className="text-[11px] font-[Lato-Bold] text-blue-700 uppercase tracking-widest"> Allowed Operation Types </label>
+                            <label className="text-[11px] font-[Lato-Bold] text-blue-700 uppercase tracking-widest"> { t('steps.allowed-types-label') } </label>
                         </div>
                         <Field control={control} name='allowInstanceLinkBlueprintIds' type='select' dataType='blueprints' multiple />
-                        <p className="text-[10px] font-[Lato-Regular] text-blue-600/70"> Leave empty to allow all operation types </p>
+                        <p className="text-[10px] font-[Lato-Regular] text-blue-600/70"> { t('steps.allowed-types-hint') } </p>
                     </div>
                 }
 			</div>
@@ -339,7 +344,7 @@ const OperationBlueprintStepConfigurationPanel = (props: PropTypes): ReactElemen
 			<div className="border-t border-black/6 px-4 py-3">
 				<Button variant="danger" size="md" onClick={onDelete} className="w-full">
 					<Trash2 className="w-3.5 h-3.5" />
-					Delete Step
+					{ t('steps.delete') }
 				</Button>
 			</div>
             {/* Link File Template Modal */}

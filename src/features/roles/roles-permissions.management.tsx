@@ -100,7 +100,7 @@ const RolesPermissionsManagement = (): ReactElement => {
 
 	const handleReset = async (role: Role): Promise<void> => {
 		if (!canEdit) return;
-		const confirmed = window.confirm(`Reset "${role.name}" permissions to system defaults?`);
+		const confirmed = window.confirm(t('roles-labels.reset-confirm', { name: role.name }));
 		if (!confirmed) return;
 
 		setResettingId(role.id);
@@ -126,10 +126,10 @@ const RolesPermissionsManagement = (): ReactElement => {
 				<div>
 					<h2 className="text-3xl font-[Lato-Bold] tracking-tight text-[#1A1A1A] flex items-center gap-3">
 						<Shield className="w-8 h-8 text-[#D4AF37]" />
-						Roles & Permissions
+						{ t('titles.roles-permissions') }
 					</h2>
 					<p className="font-[Lato-Regular] text-muted-foreground mt-2 max-w-2xl text-sm">
-						Define which permissions each role has
+						{ t('roles-labels.subtitle') }
 					</p>
 				</div>
 
@@ -137,7 +137,7 @@ const RolesPermissionsManagement = (): ReactElement => {
 					{/* Save */}
 					<Button variant="primary" size="md" loading={loading} loadingText={ t('buttons.saving') } disabled={ !form.formState.isDirty || !canEdit } onClick={() => { form.clearErrors(); form.handleSubmit(onSubmit)(); }}>
 						<Save className="w-4 h-4 mr-2" />
-						Save Changes
+						{ t('buttons.save-changes') }
 					</Button>
 				</div>
 			</div>
@@ -152,7 +152,7 @@ const RolesPermissionsManagement = (): ReactElement => {
 									<span className="text-[13px] font-[Lato-Bold] text-foreground">{role.name}</span>
 									<button
 										type="button"
-										title="View permission history"
+										title={ t('roles-labels.view-history') }
 										className="text-muted-foreground hover:text-primary transition-colors p-1 cursor-pointer"
 										onClick={() => setHistoryRole(role)}
 									>
@@ -161,7 +161,7 @@ const RolesPermissionsManagement = (): ReactElement => {
 									{canEdit && (
 										<button
 											type="button"
-											title="Reset to default permissions"
+											title={ t('roles-labels.reset-defaults') }
 											disabled={resettingId === role.id}
 											className="text-muted-foreground hover:text-amber-600 transition-colors p-1 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
 											onClick={() => handleReset(role)}

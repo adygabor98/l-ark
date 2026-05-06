@@ -180,7 +180,7 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 	/** Manage to create a new instance */
 	const handleCreate = async (): Promise<void> => {    
         if ( !canCreate ) {
-            onToast({ message: 'Some values are missing. Either the blueprint or the office.', type: 'error' });
+            onToast({ message: t('workspace.missing-values-error'), type: 'error' });
         };
 
         const { type, ...values } = methods.getValues();
@@ -221,7 +221,7 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     /** Manage to render the blueprint selection field */
     const renderBlueprintSelections = (): ReactElement => (
         <div className="space-y-3">
-            <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Operation Blueprint </label>
+            <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('workspace.blueprint-label') } </label>
 
             {/* Type tabs */}
             <div className="flex gap-2 p-1 bg-black/4 rounded-xl w-fit">
@@ -232,7 +232,7 @@ const MyWorkspaceNewInstance = (): ReactElement => {
                         }`}
                     >
                         { type === OperationType.GLOBAL ? <Globe className="w-3.5 h-3.5 text-violet-500" /> : <FolderCog className="w-3.5 h-3.5 text-amber-500" /> }
-                        { type === OperationType.GLOBAL ? 'Global' : 'Other' }
+                        { type === OperationType.GLOBAL ? t('workspace.type-global') : t('workspace.type-other') }
                     </button>
                 ))}
             </div>
@@ -240,8 +240,8 @@ const MyWorkspaceNewInstance = (): ReactElement => {
             { filteredBlueprints.length === 0 ?
                 <div className="p-8 border border-dashed border-black/10 rounded-xl text-center">
                     <FolderCog className="w-8 h-8 text-black/20 mx-auto mb-2" />
-                    <p className="text-sm text-black/40 font-[Lato-Regular]"> No published blueprints available. </p>
-                    <p className="text-xs text-black/30 font-[Lato-Regular] mt-1"> Create and publish operation blueprints first. </p>
+                    <p className="text-sm text-black/40 font-[Lato-Regular]"> { t('workspace.no-blueprints') } </p>
+                    <p className="text-xs text-black/30 font-[Lato-Regular] mt-1"> { t('workspace.no-blueprints-hint') } </p>
                 </div>
             :
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -257,10 +257,10 @@ const MyWorkspaceNewInstance = (): ReactElement => {
                                         { bp.type === OperationType.GLOBAL ? <Globe className="w-3.5 h-3.5 text-violet-500 shrink-0" /> : <FolderCog className="w-3.5 h-3.5 text-amber-500 shrink-0" /> }
                                         <span className="text-sm font-[Lato-Bold] text-black/80 truncate"> { bp.title } </span>
                                     </div>
-                                    <p className="text-xs text-black/40 font-[Lato-Regular] line-clamp-2"> { bp.description || 'No description' } </p>
+                                    <p className="text-xs text-black/40 font-[Lato-Regular] line-clamp-2"> { bp.description || t('workspace.no-description') } </p>
                                     <div className="flex items-center gap-2 mt-2">
                                         <span className="text-[10px] font-[Lato-Bold] px-2 py-0.5 rounded-full bg-black/4 text-black/50"> { bp.subType } </span>
-                                        <span className="text-[10px] text-black/30 font-[Lato-Regular]"> { bp.steps.length } steps </span>
+                                        <span className="text-[10px] text-black/30 font-[Lato-Regular]"> { t('workspace.steps-count', { count: bp.steps.length }) } </span>
                                     </div>
                                 </div>
                                 { blueprintId === bp.id &&
@@ -280,9 +280,9 @@ const MyWorkspaceNewInstance = (): ReactElement => {
     const renderPrerequisits = (): ReactElement => (
         <div className="space-y-4 animate-in slide-in-from-bottom-4 fade-in duration-500">
             <div>
-                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Prerequisites </label>
+                <label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('workspace.prerequisites-label') } </label>
                 <p className="text-xs font-[Lato-Regular] text-black/40 mt-1">
-                    This global operation requires completed instances of the following types. Select one per requirement.
+                    { t('workspace.prerequisites-description') }
                 </p>
             </div>
 
@@ -310,13 +310,13 @@ const MyWorkspaceNewInstance = (): ReactElement => {
                         { eligible.length === 0 ? (
                             <div className="flex items-center justify-between py-1">
                                 <p className="text-xs text-black/40 font-[Lato-Regular]">
-                                    No completed instances available { officeId ? ' for this office' : '' }.
+                                    { t('workspace.no-eligible-instances') }{ officeId ? ` ${t('workspace.for-this-office')}` : '' }.
                                 </p>
                                 <button
                                     onClick={() => onCreatePreRequisite(bpId)}
                                     className="text-xs font-[Lato-Bold] text-violet-600 hover:underline cursor-pointer shrink-0 ml-3 transition-colors"
                                 >
-                                    Create it first →
+                                    { t('workspace.create-prerequisite') }
                                 </button>
                             </div>
                         ) : (
@@ -362,8 +362,8 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 				<div className="w-full">
 					<div className="space-y-4 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-150">
 						<div>
-							<h2 className="text-3xl font-[Lato-Bold] text-foreground mb-3"> Select Blueprint </h2>
-							<p className="text-lg text-muted-foreground font-[Lato-Light]"> Choose an operation blueprint and office to start working. </p>
+							<h2 className="text-3xl font-[Lato-Bold] text-foreground mb-3"> { t('workspace.select-blueprint-title') } </h2>
+							<p className="text-lg text-muted-foreground font-[Lato-Light]"> { t('workspace.select-blueprint-subtitle') } </p>
 						</div>
 
                         {/* Blueprint selection */}
@@ -371,18 +371,18 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 
 						{/* Title */}
 						{ blueprintId &&
-                            <Field control={methods.control} name='title' label='Instance Title' placeholder='Give this instance a unique name...' type='text' className='bg-white' />
+                            <Field control={methods.control} name='title' label={ t('workspace.instance-title-label') } placeholder={ t('workspace.instance-title-placeholder') } type='text' className='bg-white' />
 						}
 
 						{/* Description */}
 						{ blueprintId &&
-                            <Field control={methods.control} name='description' label='Description' placeholder='Describe this operation instance...' type='textarea' className='bg-white' />
+                            <Field control={methods.control} name='description' label={ t('labels.description') } placeholder={ t('workspace.instance-description-placeholder') } type='textarea' className='bg-white' />
 						}
 
 						{/* Office selection */}
 						{ blueprintId &&
 							<div className="space-y-3 animate-in slide-in-from-bottom-4 fade-in duration-500">
-								<label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> Office </label>
+								<label className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-widest"> { t('workspace.office-label') } </label>
 								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 									{ officesUser.map(office => (
 										<button key={office.id} onClick={() => methods.setValue('officeId', office.id)}
@@ -406,7 +406,7 @@ const MyWorkspaceNewInstance = (): ReactElement => {
 								{ t('buttons.cancel') }
 							</Button>
 							<Button variant="primary" size="lg" onClick={handleCreate} className="rounded-xl" disabled={!canCreate}>
-								Start Instance
+								{ t('workspace.start-instance') }
 								<ChevronRight className="w-5 h-5" />
 							</Button>
 						</div>

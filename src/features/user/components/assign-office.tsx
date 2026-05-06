@@ -206,7 +206,7 @@ const AssignOffice = (props: PropTypes): ReactElement => {
             if( idUser ) {
                 return <><span className="font-[Lato-Bold]"> { t('labels.status-change') } </span> { t('labels.status-change-description') } </>;
             }
-            return <><span className="font-[Lato-Bold]"> { t('divisions.reassign-manager') } </span> { t('division.reassign-manager-description') } </>;
+            return <><span className="font-[Lato-Bold]"> { t('divisions.reassign-manager') } </span> { t('divisions.reassign-manager-description') } </>;
         }
         if( idUser ) {
             return <><span className="font-[Lato-Bold]"> { t('offices.assign-office') } </span> { t('offices.assign-office-description') } </>;

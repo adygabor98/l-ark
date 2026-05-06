@@ -79,7 +79,7 @@ const OperationBlueprintsManagement = (): ReactElement => {
         const { confirmed } = await onConfirmationToast({
             title: 'Archive this operation?',
             description: `"${ blueprint.title }" will be archived and can be restored later.`,
-            actionText: 'Archfrive',
+            actionText: 'Archive',
             cancelText: 'Cancel'
         });
         if ( confirmed ) {

@@ -57,16 +57,8 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
 
     /** Configuration information of the operation */
     const config = {
-        title: 'Operation Management',
-        description: 'Create and manage operational workflows with customizable steps and visual flow builders.',
         icon: Workflow,
         color: "bg-[#FFBF00]",
-        features: [
-            'Visual flow builder with drag-and-drop step connections',
-            'Support for blocking and required step configurations',
-            'Attach file templates to individual workflow steps',
-            'Global and other operation type classification'
-        ]
     };
 
     /** Manage to analyze if all the required information has been fill out to be able to move to the next step */
@@ -75,7 +67,7 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
         if ( valid ) {
             onNext();
         } else {
-            onToast({ message: 'The form is not valid.', type: 'error' });
+            onToast({ message: t('operations.form-invalid'), type: 'error' });
         }
     }
 
@@ -85,26 +77,26 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
             <div className="w-full">
                 <div className="space-y-10 animate-in slide-in-from-bottom-8 fade-in duration-700 delay-150">
                     <div>
-                        <h2 className="text-3xl font-[Lato-Bold] text-foreground mb-3"> Configure Operation Blueprint </h2>
-                        <p className="text-lg text-muted-foreground font-[Lato-Light]"> Set up the basic information for your operational blueprint. </p>
+                        <h2 className="text-3xl font-[Lato-Bold] text-foreground mb-3"> { t('operations.configure-title') } </h2>
+                        <p className="text-lg text-muted-foreground font-[Lato-Light]"> { t('operations.configure-subtitle') } </p>
                     </div>
 
                     <div className="space-y-3">
-                        <Field control={control} name='title' label='Operation Title' placeholder='Enter operation title...' type='text' required />
+                        <Field control={control} name='title' label={ t('operations.title-label') } placeholder={ t('operations.title-placeholder') } type='text' required />
 
-                        <Field control={control} name='description' label='Description' placeholder='Describe this operation...' type='textarea' />
+                        <Field control={control} name='description' label={ t('labels.description') } placeholder={ t('operations.description-placeholder') } type='textarea' />
 
-                        <Field control={control} name='type' label='Operation Type' placeholder='Select type...' type='radio' dataType='operation-category' required />
+                        <Field control={control} name='type' label={ t('operations.type-label') } placeholder={ t('operations.type-placeholder') } type='radio' dataType='operation-category' required />
 
-                        <Field control={control} name='subType' label='Sub Type' placeholder='e.g. Inmobiliaria, CC, VP...' type='text' required />
+                        <Field control={control} name='subType' label={ t('operations.subtype-label') } placeholder={ t('operations.subtype-placeholder') } type='text' required />
 
-                        <Field control={control} name='divisionId' label='Division' placeholder='Select division...' type='select' dataType='divisions' required />
+                        <Field control={control} name='divisionId' label={ t('labels.division') } placeholder={ t('operations.division-placeholder') } type='select' dataType='divisions' required />
                     </div>
 
                     { operationType === OperationType.OTHER &&
                         <div className="flex flex-col gap-1">
-                            <Field control={control} name='maxGlobalOperations' label='Max Times Linkable to a Global Operation' placeholder='e.g. 1' type='number' />
-                            <p className="text-xs font-[Lato-Regular] text-muted-foreground"> How many times this operation can be linked to a global operation. </p>
+                            <Field control={control} name='maxGlobalOperations' label={ t('operations.max-global-label') } placeholder={ t('operations.max-global-placeholder') } type='number' />
+                            <p className="text-xs font-[Lato-Regular] text-muted-foreground"> { t('operations.max-global-hint') } </p>
                         </div>
                     }
 
@@ -112,9 +104,9 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
                     { operationType === OperationType.GLOBAL &&
                         <div className="space-y-3 p-4 rounded-xl bg-blue-50 border border-blue-200/60">
                             <div>
-                                <h3 className="text-sm font-[Lato-Bold] text-blue-800"> Prerequisites </h3>
+                                <h3 className="text-sm font-[Lato-Bold] text-blue-800"> { t('operations.prerequisites-section') } </h3>
                                 <p className="text-xs font-[Lato-Regular] text-blue-600/70 mt-0.5">
-                                    Select which other operation blueprints must be completed before this global operation can be requested.
+                                    { t('operations.prerequisites-description') }
                                 </p>
                             </div>
 
@@ -150,7 +142,7 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
                                 dataType='blueprints'
                                 params={{ type: OperationType.OTHER }}
                                 className='bg-white'
-                                placeholder='Select all the other operations as a pre-requisits'
+                                placeholder={ t('operations.prerequisites-placeholder') }
                                 onSelectChange={(value: string) => {
                                     if ( !value ) return;
 
@@ -169,7 +161,7 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
                             { t('buttons.cancel') }
                         </Button>
                         <Button variant="primary" size="lg" onClick={onNextStep} className="rounded-xl shadow-blue-500/20">
-                            Next: Builder
+                            { t('operations.next-builder') }
                             <ChevronRight className="w-5 h-5" />
                         </Button>
                     </div>
@@ -192,13 +184,13 @@ const OperationBlueprintCreationForm = (props: PropTypes): ReactElement => {
                         <div className="bg-white/20 w-12 h-12 md:w-16 md:h-16 rounded-2xl flex items-center justify-center mb-0 md:mb-6 backdrop-blur-md border border-white/10 shadow-xl shrink-0">
                             <Workflow className="w-6 h-6 md:w-8 md:h-8 text-neutral-700" />
                         </div>
-                        <h1 className="text-xl md:text-2xl lg:text-3xl font-[Lato-Black] md:mb-4 tracking-tight text-neutral-700"> { config.title } </h1>
+                        <h1 className="text-xl md:text-2xl lg:text-3xl font-[Lato-Black] md:mb-4 tracking-tight text-neutral-700"> { t('operations.management-title') } </h1>
                     </div>
-                    <p className="hidden md:block text-neutral-700 font-[Lato-Regular] text-base leading-relaxed mb-8"> { config.description } </p>
+                    <p className="hidden md:block text-neutral-700 font-[Lato-Regular] text-base leading-relaxed mb-8"> { t('operations.management-description') } </p>
 
                     <div className="hidden md:block space-y-4">
-                        <h3 className="text-xs font-[Lato-Bold] uppercase text-neutral-700 mb-4"> Included features </h3>
-                        { config.features.map((feature: string, i: number) => (
+                        <h3 className="text-xs font-[Lato-Bold] uppercase text-neutral-700 mb-4"> { t('labels.include-features') } </h3>
+                        { [t('operations.feature-flow-builder'), t('operations.feature-step-config'), t('operations.feature-file-templates'), t('operations.feature-global-type')].map((feature: string, i: number) => (
                             <div key={i} className="flex items-center gap-5 text-neutral-700">
                                 <div className="p-1 rounded-full bg-white/20 flex items-center justify-center">
                                     <Check className="w-3! h-3!" />

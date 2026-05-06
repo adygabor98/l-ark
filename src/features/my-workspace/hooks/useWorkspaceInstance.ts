@@ -27,6 +27,7 @@ import {
 	useOperationBlueprint
 } from "../../../server/hooks/useOperationBlueprint";
 import { computeVisibleSteps } from "../utils/step-visibility";
+import { useSocketEvents } from "../../../shared/hooks/useSocketEvents";
 
 interface UseWorkspaceInstanceTypes {
 	loading: boolean;
@@ -224,6 +225,9 @@ export const useWorkspaceInstance = (instanceId: number | null): UseWorkspaceIns
 			setInstance(response.data.data);
 		}
 	}, [instanceId]);
+
+	useSocketEvents('updation-step-instance-event', refreshInstance);
+	useSocketEvents('updation-instance-event', refreshInstance);
 
 	return {
 		instance,

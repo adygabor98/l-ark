@@ -254,11 +254,11 @@ const TemplateDetail = (): ReactElement => {
     /** Show the unsaved-changes confirmation toast whenever the blocker fires */
     const handleBlockedNavigation = useCallback(async () => {
         const { confirmed, secondary } = await onConfirmationToast({
-            title: 'Unsaved Changes',
-            description: 'You have unsaved changes that will be lost if you leave.',
-            actionText: 'Save & Leave',
-            secondaryActionText: 'Discard',
-            cancelText: 'Stay',
+            title: t('templates-extra.unsaved-title'),
+            description: t('templates-extra.unsaved-changes'),
+            actionText: t('templates-extra.save-and-leave'),
+            secondaryActionText: t('templates-extra.discard'),
+            cancelText: t('templates-extra.stay'),
             actionColor: 'success',
         });
 

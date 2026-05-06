@@ -11,6 +11,7 @@ import {
     useExportLayout
 } from '../../export-layout.context';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 interface TokenItemProps {
     token: AvailableToken;
@@ -18,11 +19,12 @@ interface TokenItemProps {
 
 const TokenItem = ({ token }: TokenItemProps): ReactElement => {
     const { state } = useExportLayout();
+    const { t } = useTranslation();
     const icon = getFieldTypeIcon(token.fieldType);
 
     const handleClick = () => {
         if (!state.activeEditorInsertFn) {
-            toast('Focus a text block first', { icon: '📝', duration: 2000 });
+            toast(t('canvas.focus-text-block'), { icon: '📝', duration: 2000 });
             return;
         }
         const opts = token.options && token.options.length > 0 ? JSON.stringify(token.options) : undefined;
@@ -37,7 +39,7 @@ const TokenItem = ({ token }: TokenItemProps): ReactElement => {
                 }
             }}
             onClick={handleClick}
-            title={ state.activeEditorInsertFn ? `Insert "${token.fieldLabel}" token` : 'Focus a text block first' }
+            title={ state.activeEditorInsertFn ? `Insert "${token.fieldLabel}" token` : t('canvas.focus-text-block') }
             className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-left transition-colors text-xs group
                 ${state.activeEditorInsertFn
                     ? 'hover:bg-amber-50 hover:text-amber-700 cursor-pointer'

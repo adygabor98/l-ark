@@ -5,6 +5,9 @@ import type {
     Editor
 } from '@tiptap/react';
 import {
+    useTranslation
+} from 'react-i18next';
+import {
     Bold,
     Italic,
     Underline,
@@ -48,6 +51,7 @@ interface ExportToolbarProps {
 }
 
 const ExportToolbar = ({ editor }: ExportToolbarProps): ReactElement => {
+    const { t } = useTranslation();
     const currentSize = editor.getAttributes('textStyle').fontSize?.replace('px', '') ?? '14';
 
     return (
@@ -59,7 +63,7 @@ const ExportToolbar = ({ editor }: ExportToolbarProps): ReactElement => {
                     editor.chain().focus().setMark('textStyle', { fontSize: `${e.target.value}px` }).run();
                 }}
                 className="text-xs border border-black/10 rounded-md px-1 py-1 bg-white text-black/60 cursor-pointer h-7 outline-none focus:border-amber-400"
-                title="Font size"
+                title={ t('toolbar.font-size') }
             >
                 { FONT_SIZES.map(s => <option key={s} value={s}> { s } px </option>) }
             </select>
@@ -70,21 +74,21 @@ const ExportToolbar = ({ editor }: ExportToolbarProps): ReactElement => {
             <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBold().run()}
                 isActive={editor.isActive('bold')}
-                title="Bold"
+                title={ t('toolbar.bold') }
             >
                 <Bold className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().toggleItalic().run()}
                 isActive={editor.isActive('italic')}
-                title="Italic"
+                title={ t('toolbar.italic') }
             >
                 <Italic className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().toggleUnderline().run()}
                 isActive={editor.isActive('underline')}
-                title="Underline"
+                title={ t('toolbar.underline') }
             >
                 <Underline className="w-3.5 h-3.5" />
             </ToolbarButton>
@@ -95,28 +99,28 @@ const ExportToolbar = ({ editor }: ExportToolbarProps): ReactElement => {
             <ToolbarButton
                 onClick={() => editor.chain().focus().setTextAlign('left').run()}
                 isActive={editor.isActive({ textAlign: 'left' })}
-                title="Align left"
+                title={ t('toolbar.align-left') }
             >
                 <AlignLeft className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().setTextAlign('center').run()}
                 isActive={editor.isActive({ textAlign: 'center' })}
-                title="Align center"
+                title={ t('toolbar.align-center') }
             >
                 <AlignCenter className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().setTextAlign('right').run()}
                 isActive={editor.isActive({ textAlign: 'right' })}
-                title="Align right"
+                title={ t('toolbar.align-right') }
             >
                 <AlignRight className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().setTextAlign('justify').run()}
                 isActive={editor.isActive({ textAlign: 'justify' })}
-                title="Justify"
+                title={ t('toolbar.align-justify') }
             >
                 <AlignJustify className="w-3.5 h-3.5" />
             </ToolbarButton>
@@ -127,14 +131,14 @@ const ExportToolbar = ({ editor }: ExportToolbarProps): ReactElement => {
             <ToolbarButton
                 onClick={() => editor.chain().focus().toggleBulletList().run()}
                 isActive={editor.isActive('bulletList')}
-                title="Bullet list"
+                title={ t('toolbar.bullet-list') }
             >
                 <List className="w-3.5 h-3.5" />
             </ToolbarButton>
             <ToolbarButton
                 onClick={() => editor.chain().focus().toggleOrderedList().run()}
                 isActive={editor.isActive('orderedList')}
-                title="Ordered list"
+                title={ t('toolbar.ordered-list') }
             >
                 <ListOrdered className="w-3.5 h-3.5" />
             </ToolbarButton>

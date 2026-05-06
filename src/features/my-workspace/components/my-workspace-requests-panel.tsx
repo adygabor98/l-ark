@@ -3,6 +3,7 @@ import {
     useState,
     type ReactElement
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     CheckCircle2,
     XCircle,
@@ -30,6 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
 const MyWorkspaceRequestsPanel = (): ReactElement => {
     const { requests, retrieveRequests, handleRequest } = useOperationRequest();
     const { onToast } = useToast();
+    const { t } = useTranslation();
 
     const [filter, setFilter] = useState<RequestFilter>('PENDING');
     const [rejectingId, setRejectingId] = useState<number | null>(null);
@@ -44,7 +46,7 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
         setActionLoading(req.id);
         try {
             const res = await handleRequest({ input: { requestId: req.id, action: 'APPROVED' } });
-            onToast({ message: getResponseMessage(res?.data?.data) ?? 'Request approved.', type: 'success' });
+            onToast({ message: getResponseMessage(res?.data?.data) ?? t('workspace.request-approved'), type: 'success' });
         } finally {
             setActionLoading(null);
         }
@@ -52,13 +54,13 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
 
     const handleReject = async (req: OperationRequest): Promise<void> => {
         if (!rejectionReason.trim()) {
-            onToast({ message: 'Please provide a rejection reason.', type: 'warning' });
+            onToast({ message: t('workspace.provide-rejection-reason'), type: 'warning' });
             return;
         }
         setActionLoading(req.id);
         try {
             const res = await handleRequest({ input: { requestId: req.id, action: 'REJECTED', rejectionReason: rejectionReason.trim() } });
-            onToast({ message: getResponseMessage(res?.data?.data) ?? 'Request rejected.', type: 'success' });
+            onToast({ message: getResponseMessage(res?.data?.data) ?? t('workspace.request-rejected-toast'), type: 'success' });
             setRejectingId(null);
             setRejectionReason('');
         } finally {
@@ -67,10 +69,10 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
     };
 
     const filterOptions: { label: string; value: RequestFilter }[] = [
-        { label: 'Pending', value: 'PENDING' },
-        { label: 'Approved', value: 'APPROVED' },
-        { label: 'Rejected', value: 'REJECTED' },
-        { label: 'All', value: 'ALL' },
+        { label: t('workspace.filter-pending'), value: 'PENDING' },
+        { label: t('workspace.filter-approved'), value: 'APPROVED' },
+        { label: t('workspace.filter-rejected'), value: 'REJECTED' },
+        { label: t('workspace.filter-all'), value: 'ALL' },
     ];
 
     return (
@@ -93,20 +95,20 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                     <div className="w-16 h-16 bg-black/3 rounded-2xl flex items-center justify-center mb-4">
                         <Inbox className="w-8 h-8 text-black/25" />
                     </div>
-                    <h3 className="text-xl font-[Lato-Black] text-black mb-1">No requests</h3>
+                    <h3 className="text-xl font-[Lato-Black] text-black mb-1">{ t('workspace.no-requests') }</h3>
                     <p className="text-sm text-black/45 font-[Lato-Regular]">
-                        { filter === 'PENDING' ? 'No pending global operation requests.' : 'No requests match this filter.' }
+                        { filter === 'PENDING' ? t('workspace.no-pending-requests') : t('workspace.no-requests-filter') }
                     </p>
                 </div>
             ) : (
                 <div className="bg-white rounded-2xl border border-black/6 overflow-hidden">
                     {/* Table header */}
                     <div className="grid grid-cols-[1.5fr_1.5fr_1.5fr_1fr_120px] gap-4 px-6 py-3.5 bg-black/2 border-b border-black/6">
-                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">Requested by</span>
-                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">Source Operation</span>
-                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">Global Blueprint</span>
-                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">Date</span>
-                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">Status</span>
+                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">{ t('workspace.col-requested-by') }</span>
+                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">{ t('workspace.col-source-operation') }</span>
+                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">{ t('workspace.col-global-blueprint') }</span>
+                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">{ t('workspace.col-date') }</span>
+                        <span className="text-[11px] font-[Lato-Bold] text-black/40 uppercase tracking-wider">{ t('workspace.col-status') }</span>
                     </div>
 
                     { requests.map((req: OperationRequest) => (
@@ -161,7 +163,7 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                                                     ? <Loader2 className="w-3 h-3 animate-spin" />
                                                     : <CheckCircle2 className="w-3 h-3" />
                                                 }
-                                                Approve
+                                                { t('workspace.approve') }
                                             </button>
                                             <button
                                                 disabled={actionLoading === req.id}
@@ -169,7 +171,7 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                                                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-[Lato-Bold] text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors cursor-pointer disabled:opacity-50"
                                             >
                                                 <XCircle className="w-3 h-3" />
-                                                Reject
+                                                { t('workspace.reject') }
                                             </button>
                                         </div>
                                     ) : (
@@ -186,7 +188,7 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                                     <input
                                         autoFocus
                                         type="text"
-                                        placeholder="Reason for rejection (required)"
+                                        placeholder={ t('workspace.rejection-reason-placeholder') }
                                         value={rejectionReason}
                                         onChange={e => setRejectionReason(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') handleReject(req); if (e.key === 'Escape') { setRejectingId(null); setRejectionReason(''); } }}
@@ -198,13 +200,13 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                                         disabled={actionLoading === req.id || !rejectionReason.trim()}
                                         onClick={() => handleReject(req)}
                                     >
-                                        { actionLoading === req.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Confirm Reject' }
+                                        { actionLoading === req.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('workspace.confirm-reject') }
                                     </Button>
                                     <button
                                         onClick={() => { setRejectingId(null); setRejectionReason(''); }}
                                         className="text-xs font-[Lato-Regular] text-black/40 hover:text-black/60 cursor-pointer"
                                     >
-                                        Cancel
+                                        { t('buttons.cancel') }
                                     </button>
                                 </div>
                             )}
@@ -213,7 +215,7 @@ const MyWorkspaceRequestsPanel = (): ReactElement => {
                             { req.status === 'REJECTED' && req.rejectionReason && (
                                 <div className="px-6 pb-3">
                                     <p className="text-xs font-[Lato-Regular] text-red-500/80">
-                                        Reason: { req.rejectionReason }
+                                        { t('workspace.rejection-reason-prefix') } { req.rejectionReason }
                                     </p>
                                 </div>
                             )}

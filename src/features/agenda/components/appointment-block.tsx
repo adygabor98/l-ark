@@ -183,8 +183,9 @@ const AppointmentBlock = React.memo((props: PropTypes) => {
         document.addEventListener('pointerup', onPointerUp);
     }, [appointment, days, onEdit, onMoveEnd, onResizeEnd, weekViewRef]);
 
+    console.log(appointment)
     return (
-        <div ref={blockRef} className="appointment-block flex flex-col gap-2" onPointerDown={handlePointerDown}
+        <div ref={blockRef} className="appointment-block flex flex-col" onPointerDown={handlePointerDown}
             title={`${appointment.name}\n${formatTime(format(appointment.startAt, 'HH:mm'))} - ${formatTime(format(appointment.endAt, 'HH:mm'))}\n${appointment.users.map(user => `${user.user.firstName} ${user.user.lastName}`).join(', ')}`}
             style={{
                 top: `${top}px`,

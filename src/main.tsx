@@ -33,6 +33,9 @@ import {
 	TooltipProvider
 } from './shared/components/tooltip';
 import {
+	SocketProvider
+} from './shared/context/socket.context';
+import {
 	Toaster
 } from "sileo";
 import i18n from './shared/helpers/i18n';
@@ -52,21 +55,23 @@ const App = () => {
 					<ApolloProvider client={apolloClient}>
 						<I18nextProvider i18n={i18n}>
 							<Provider store={store}>
-								<PersistGate loading={null} persistor={persistor}>
-									<Layout>
-										<>
-											<RouterProvider router={router} />
-											<Toaster
-												position="top-center"
-												options={{
-													fill: "#171717",
-													styles: { description: "text-white/75!" },
-													duration: null
-												}}
-											/>
-										</>
-									</Layout>
-								</PersistGate>
+								<SocketProvider>
+									<PersistGate loading={null} persistor={persistor}>
+										<Layout>
+											<>
+												<RouterProvider router={router} />
+												<Toaster
+													position="top-center"
+													options={{
+														fill: "#171717",
+														styles: { description: "text-white/75!" },
+														duration: null
+													}}
+												/>
+											</>
+										</Layout>
+									</PersistGate>
+								</SocketProvider>
 							</Provider>
 						</I18nextProvider>
 					</ApolloProvider>

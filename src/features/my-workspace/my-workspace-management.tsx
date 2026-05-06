@@ -69,6 +69,7 @@ import MyWorkspaceRequestsPanel from './components/my-workspace-requests-panel';
 import Button from '../../shared/components/button';
 import PermissionGate from '../../shared/components/permission-gate';
 import usePermissions from '../../shared/hooks/usePermissions';
+import { useSocketEvents } from '../../shared/hooks/useSocketEvents';
 
 type WorkspaceView = 'instances' | 'requests';
 
@@ -108,6 +109,9 @@ const MyWorkspaceManagement = (): ReactElement => {
 	useEffect(() => {
 		retrieveInstances();
 	}, []);
+
+	useSocketEvents('creation-instance-event', retrieveInstances);
+	useSocketEvents('updation-instance-event', retrieveInstances);
 
 	useEffect(() => {
 		if (!user?.role?.code) return;

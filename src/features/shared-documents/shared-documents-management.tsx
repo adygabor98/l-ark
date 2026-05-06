@@ -11,36 +11,46 @@ import {
     Share2,
     User as UserIcon
 } from 'lucide-react';
-import { format } from 'date-fns';
-import { Pagination } from 'antd';
-import { useTranslation } from 'react-i18next';
-import { useDocumentGrants } from '../../server/hooks/useDocumentGrants';
+import {
+    format
+} from 'date-fns';
+import {
+    Pagination
+} from 'antd';
+import {
+    useTranslation
+} from 'react-i18next';
+import {
+    useDocumentGrants
+} from '../../server/hooks/useDocumentGrants';
 import MyWorkspaceOTP from '../my-workspace/components/my-workspace-otp';
 
 const formatBytes = (n: number): string => {
-    if (!n || n < 1024) return `${n ?? 0} B`;
-    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if ( !n || n < 1024 ) return `${n ?? 0} B`;
+    if ( n < 1024 * 1024 ) return `${(n / 1024).toFixed(1)} KB`;
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
 };
 
 const formatPersonName = (p?: { firstName?: string | null; lastName?: string | null } | null): string => {
-    if (!p) return '—';
-    return `${p.firstName ?? ''} ${p.lastName ?? ''}`.trim() || '—';
+    if ( !p ) return '—';
+    return `${ p.firstName ?? '' } ${ p.lastName ?? '' }`.trim() || '—';
 };
 
 const SharedDocumentsManagement = (): ReactElement => {
+    /** Translation utilities */
     const { t } = useTranslation();
+    /** Document grants api utilities */
     const { sharedDocuments, retrieveSharedDocuments } = useDocumentGrants();
-
+    /** Pagination utilities */
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [pageSize, setPageSize] = useState<number>(10);
     /** Controls the OTP-protected file download flow (reuses MyWorkspaceOTP) */
-    const [otpConfig, setOtpConfig] = useState<{ docId: number; fileName: string } | null>(null);
+    const [ otpConfig, setOtpConfig ] = useState<{ docId: number; fileName: string } | null>(null);
 
     useEffect(() => {
         retrieveSharedDocuments();
     }, []);
-
+    /** Memorize the pagination information */
     const paginated = useMemo(() => {
         const start = (currentPage - 1) * pageSize;
         return sharedDocuments.slice(start, start + pageSize);
@@ -86,17 +96,11 @@ const SharedDocumentsManagement = (): ReactElement => {
                             { paginated.map((grant) => {
                                 const doc = grant.document;
                                 const instance = doc?.stepInstance?.instance;
-                                const expiresLabel = grant.expiresAt
-                                    ? format(new Date(grant.expiresAt as unknown as string), 'dd MMM yyyy')
-                                    : 'Never';
-                                const sharedOnLabel = grant.createdAt
-                                    ? format(new Date(grant.createdAt as unknown as string), 'dd MMM yyyy')
-                                    : '—';
+                                const expiresLabel = grant.expiresAt ? format(new Date(grant.expiresAt as unknown as string), 'dd MMM yyyy') : 'Never';
+                                const sharedOnLabel = grant.createdAt ? format(new Date(grant.createdAt as unknown as string), 'dd MMM yyyy') : '—';
 
                                 return (
-                                    <div key={grant.id}
-                                        className="grid grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_64px] gap-4 px-6 py-4 border-b border-black/4 last:border-b-0 items-center"
-                                    >
+                                    <div key={grant.id} className="grid grid-cols-[2fr_1.2fr_1.2fr_1fr_1fr_64px] gap-4 px-6 py-4 border-b border-black/4 last:border-b-0 items-center">
                                         {/* Document name */}
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-black/3 shrink-0">

@@ -52,9 +52,9 @@ const Login = (): ReactElement => {
 	const handleLogin = async (data: any): Promise<void> => {
 		try {
 			const result = await sileo.promise(login(data.username, data.password), {
-				loading: { title: "Loading..." },
-				success: { title: "Success", description: <span>{ getTitleDay() }, let's start working...</span> },
-				error: { title: "Ups!", description: 'Sorry but we weren\'t able to find any users with those credentials.' },
+				loading: { title: t('login.toast-loading') },
+				success: { title: t('login.toast-success'), description: <span>{ getTitleDay() }, let's start working...</span> },
+				error: { title: t('login.toast-error-title'), description: t('login.toast-error-description') },
 			});
 
 			if( result.success ) {
@@ -87,9 +87,9 @@ const Login = (): ReactElement => {
 							<div className="w-15 h-15 rounded-lg bg-primary/10 flex items-center justify-center shadow-sm shadow-primary/20">
 								<img src={Logo} alt="Logo" className="w-13 h-13 text-white" />
 							</div>
-							<h2 className="text-3xl font-[Lato-Bold] tracking-tight text-foreground">Welcome back</h2>
+							<h2 className="text-3xl font-[Lato-Bold] tracking-tight text-foreground">{ t('titles.welcome-back') }</h2>
 						</div>
-						<p className="text-sm text-muted-foreground font-[Lato-Regular] mt-4">Enter your credentials to access the secure portal.</p>
+						<p className="text-sm text-muted-foreground font-[Lato-Regular] mt-4">{ t('messages.login-secure-description') }</p>
 					</div>
 
 					<Field control={control} name='username' label={ t('labels.username') } placeholder={ t('placeholders.username-placeholder') } type='text' required />
@@ -97,14 +97,14 @@ const Login = (): ReactElement => {
 
 					<Button variant='primary' onClick={handleSubmit(handleLogin)}>
 						<span className="relative z-10 flex items-center justify-center gap-2">
-							Sign In <ArrowRight className="h-4 w-4" />
+							{ t('login.cta') } <ArrowRight className="h-4 w-4" />
 						</span>
 						<div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
 					</Button>
 
 					<p className="text-xs text-center text-muted-foreground pt-4">
-						Protected by Arkline SecureShield™. <br/>
-						Unorthorized access is strictly prohibited.
+						{ t('login.security-notice') } <br/>
+						{ t('login.security-notice-2') }
 					</p>
 				</div>
 			</div>

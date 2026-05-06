@@ -2,6 +2,9 @@ import type {
 	ReactElement
 } from "react";
 import {
+    useTranslation
+} from "react-i18next";
+import {
 	BaseEdge,
 	EdgeLabelRenderer,
 	getBezierPath,
@@ -33,6 +36,7 @@ const USER_CHOICE_CURVATURE = 0.35;
 export const OperationBlueprintDeletableEdge = (props: EdgeProps): ReactElement => {
 	/** Retrieve component properties */
 	const { id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, style = {}, markerEnd, selected, data } = props;
+    const { t } = useTranslation();
 	const edgeData = data as DeletableEdgeData;
 	/** Determine the type condition of the edge */
 	const isUserChoice = edgeData?.conditionType === EdgeConditionType.USER_CHOICE;
@@ -92,14 +96,14 @@ export const OperationBlueprintDeletableEdge = (props: EdgeProps): ReactElement 
 						<button
 							onClick={onEdit}
 							className="flex h-5 w-5 items-center justify-center rounded-full border border-black/10 bg-white shadow-sm cursor-pointer transition-all duration-200 hover:bg-violet-50 hover:border-violet-300 hover:text-violet-500 hover:scale-110 text-black/40"
-							title="Edit connection"
+							title={ t('edge.edit-connection') }
 						>
 							<Settings className="w-2.5 h-2.5" />
 						</button>
 						<button
 							onClick={onDelete}
 							className="flex h-5 w-5 items-center justify-center rounded-full border border-black/10 bg-white shadow-sm cursor-pointer transition-all duration-200 hover:bg-red-50 hover:border-red-300 hover:text-red-500 hover:scale-110 text-black/40"
-							title="Remove connection"
+							title={ t('edge.remove-connection') }
 						>
 							<X className="w-2.5 h-2.5" />
 						</button>

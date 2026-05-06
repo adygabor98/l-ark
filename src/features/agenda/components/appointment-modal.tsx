@@ -37,6 +37,9 @@ import {
 } from '../../../server/hooks/useApolloWithToast';
 import Field from '../../../shared/components/field';
 import usePermissions from '../../../shared/hooks/usePermissions';
+import {
+	useTranslation
+} from 'react-i18next';
 import Button from '../../../shared/components/button';
 
 const EMPTY_FORM = {
@@ -59,6 +62,8 @@ export const AppointmentModal = (props: PropTypes) => {
 	const { id, open, setOpen } = props;
 	/** Permissions api utilities */
 	const { user } = usePermissions();
+	/** Translation utilities */
+	const { t } = useTranslation();
 	/** Agenda api utilities */
 	const { retrieveAppointmentById, createAppointment, updateAppointment, deleteAppointment } = useAgenda();
 	/** State to manage the loading */
@@ -155,41 +160,41 @@ export const AppointmentModal = (props: PropTypes) => {
 				<div className="p-6 space-y-5">
 					<DialogHeader>
 						<DialogTitle>
-							{ isEditing ? 'Edit Appointment' : 'New Appointment' }
+							{ isEditing ? t('agenda-labels.edit-appointment') : t('agenda-labels.new-appointment') }
 						</DialogTitle>
 					</DialogHeader>
 					<div className='flex flex-col gap-4'>
 						{/* Name */}
-						<Field control={control} name='name' label={ 'Name' } type='text' placeholder={ 'Assessorament X' } required />
+						<Field control={control} name='name' label={ t('labels.name') } type='text' placeholder={ t('agenda-labels.name-placeholder') } required />
 
 						{/* Description */}
-						<Field control={control} name='description' label={ 'Description' } type='textarea' placeholder={ 'Optional description...' } />
+						<Field control={control} name='description' label={ t('labels.description') } type='textarea' placeholder={ t('agenda-labels.description-placeholder') } />
 
 						{/* Date */}
-						<Field control={control} name='date' label={ 'Date' } type='date' placeholder={ 'dd-MM-yyyy' } required />
+						<Field control={control} name='date' label={ t('agenda-labels.date') } type='date' placeholder={ 'dd-MM-yyyy' } required />
 
 						{/* Start + End time */}
 						<div className="flex gap-3">
-							<Field control={control} name='startTime' label={ 'Start at' } type='time' placeholder={ 'HH:MM' } required />
-							<Field control={control} name='endTime' label={ 'End at' } type='time' placeholder={ 'HH:MM' } required />
+							<Field control={control} name='startTime' label={ t('agenda-labels.start-at') } type='time' placeholder={ 'HH:MM' } required />
+							<Field control={control} name='endTime' label={ t('agenda-labels.end-at') } type='time' placeholder={ 'HH:MM' } required />
 						</div>
 
 						{/* Date */}
-						<Field control={control} name='employeeIds' label={ 'Employees' } type='select' dataType='users' params={{ sourceUser: user?.id }} multiple placeholder={ 'Select all the employees involved' } required />
+						<Field control={control} name='employeeIds' label={ t('agenda-labels.employees') } type='select' dataType='users' params={{ sourceUser: user?.id }} multiple placeholder={ t('agenda-labels.employees-placeholder') } required />
 					</div>
 
 					{/* Actions */}
 					<DialogFooter className="pt-3 border-t border-border/30 mt-1 gap-2!">
 						{ isEditing &&
 							<Button variant="danger" size="md" onClick={handleDelete} className="mr-auto!">
-								{ loading ? 'Deleting...' : 'Delete' }
+								{ loading ? t('buttons.deleting') : t('buttons.delete') }
 							</Button>
 						}
 						<Button variant="secondary" size="md" onClick={() => setOpen(null)}>
-							Cancel
+							{ t('buttons.cancel') }
 						</Button>
 						<Button variant="primary" size="md" onClick={handleSubmit(onSubmit)}>
-							{ loading ? 'Saving...' : id ? 'Save Changes' : 'Create' }
+							{ loading ? t('buttons.saving') : id ? t('buttons.save-changes') : t('buttons.create') }
 						</Button>
 					</DialogFooter>
 				</div>

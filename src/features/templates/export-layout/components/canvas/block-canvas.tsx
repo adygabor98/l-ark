@@ -44,6 +44,7 @@ import {
 import {
     useExportLayout
 } from '../../export-layout.context';
+import { useTranslation } from 'react-i18next';
 import {
     createPortal
 } from 'react-dom';
@@ -120,15 +121,16 @@ const rowHasContent = (row: ExportRow): boolean => {
 
 // Inline delete confirmation
 const DeleteConfirmation = ({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }): ReactElement => {
+    const { t } = useTranslation();
     return (
         <div className="flex flex-col items-center gap-1.5 bg-red-50 border border-red-200 rounded-lg px-2 py-1 shadow-lg z-50" onClick={e => e.stopPropagation()}>
-            <span className="text-xs text-red-600 font-[Lato-Regular] whitespace-nowrap"> Delete? </span>
+            <span className="text-xs text-red-600 font-[Lato-Regular] whitespace-nowrap"> { t('canvas.delete-confirm') } </span>
             <div>
                 <Button variant='danger' onClick={onConfirm}>
-                    Delete
+                    { t('buttons.delete') }
                 </Button>
                 <Button variant='secondary' onClick={onCancel}>
-                    Keep
+                    { t('canvas.keep') }
                 </Button>
             </div>
         </div>
@@ -137,13 +139,14 @@ const DeleteConfirmation = ({ onConfirm, onCancel }: { onConfirm: () => void; on
 
 // Block renderer
 const BlockContent = memo(function BlockContent({ block }: { block: ExportBlock }): ReactElement {
+    const { t } = useTranslation();
     switch (block.type) {
         case 'RICH_TEXT': return <RichTextBlock block={block} />;
         case 'TABLE': return <TableBlock block={block} />;
         case 'SIGNATURE': return <SignatureBlock block={block} />;
         case 'FIELD_GRID': return <FieldGridBlock block={block} />;
         case 'FORM_GRID': return <FormGridBlock block={block} />;
-        case 'BLANK': return <div className="w-full h-full min-h-10 border border-dashed border-black/15 rounded-md bg-black/1 flex items-center justify-center"><span className="text-[10px] text-black/25 font-[Lato-Regular] select-none">Empty space</span></div>;
+        case 'BLANK': return <div className="w-full h-full min-h-10 border border-dashed border-black/15 rounded-md bg-black/1 flex items-center justify-center"><span className="text-[10px] text-black/25 font-[Lato-Regular] select-none">{ t('canvas.empty-space') }</span></div>;
         default: return <></>;
     }
 }, (prev, next) => prev.block === next.block);
@@ -237,6 +240,7 @@ const  ResizeHandle = ({ rowId, leftCellIdx, row, pageWidth, scale }: ResizeHand
 const ColumnLayoutButton = ({ row }: { row: ExportRow }): ReactElement => {
     /** Export layout api utilities */
     const { dispatch } = useExportLayout();
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const id = useId();
     const current = row.cells.length;
@@ -265,7 +269,7 @@ const ColumnLayoutButton = ({ row }: { row: ExportRow }): ReactElement => {
                 <div className="absolute right-7 top-0 z-50 bg-white border border-black/10 rounded-xl shadow-xl p-2 w-44"
                     onClick={e => e.stopPropagation()}
                 >
-                    <p className="text-[10px] text-black/40 uppercase tracking-wide font-semibold mb-1.5 px-1"> Column layout </p>
+                    <p className="text-[10px] text-black/40 uppercase tracking-wide font-semibold mb-1.5 px-1"> { t('canvas.column-layout') } </p>
                     { LAYOUTS.map(({ cols, icon, title }) => (
                         <button key={cols}
                             onClick={() => {
@@ -289,6 +293,7 @@ const ColumnLayoutButton = ({ row }: { row: ExportRow }): ReactElement => {
 // Block type swap button (for cells in multi-column rows)
 const SwapBlockButton = ({ block }: { block: ExportBlock }): ReactElement => {
     const { dispatch } = useExportLayout();
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
     const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const id = useId();
@@ -313,7 +318,7 @@ const SwapBlockButton = ({ block }: { block: ExportBlock }): ReactElement => {
         <div className="relative">
             <button
                 onClick={handleSwapClick}
-                title="Change block type"
+                title={ t('canvas.change-block-type') }
                 className={`p-1 rounded-md bg-white/90 border border-black/10 shadow-sm transition-colors ${
                     open ? 'text-amber-500 bg-amber-50' : 'text-black/30 hover:text-amber-500'
                 }`}
@@ -345,6 +350,7 @@ interface CellWrapperProps {
 
 const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
     const { state, dispatch } = useExportLayout();
+    const { t } = useTranslation();
     const [confirmDelete, setConfirmDelete] = useState(false);
     const isSelected = state.selectedBlockId === cell.block.id;
     const hasIssue = blockHasIssue(cell.block);
@@ -417,7 +423,7 @@ const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
                 :
                     <>
                         {/* Block drag handle (moves block to another cell/row) */}
-                        <div ref={setDragRef} {...dragAttrs} {...dragListeners} title="Drag to move block to another cell"
+                        <div ref={setDragRef} {...dragAttrs} {...dragListeners} title={ t('canvas.drag-move-block') }
                             className="p-1 rounded-md bg-white/95 border border-black/10 text-black/30 hover:text-amber-500 hover:bg-amber-50 shadow-sm cursor-grab active:cursor-grabbing"
                             onClick={e => e.stopPropagation()}
                         >
@@ -428,7 +434,7 @@ const CellWrapper = ({ cell, children }: CellWrapperProps): ReactElement => {
 
                         <button
                             onClick={handleDeleteBlock}
-                            title="Delete block"
+                            title={ t('canvas.delete-block') }
                             className="p-1 rounded-md bg-white/95 border border-black/10 text-black/30 hover:text-red-500 hover:bg-red-50 shadow-sm"
                         >
                             <Trash2 className="w-3 h-3" />
@@ -453,6 +459,7 @@ interface SortableRowProps {
 
 const SortableRow = memo(function SortableRow({ row, pageWidth, scale, isFirst, isLast, onMoveUp, onMoveDown }: SortableRowProps): ReactElement {
     const { dispatch } = useExportLayout();
+    const { t } = useTranslation();
     const [showAddMenu, setShowAddMenu] = useState(false);
     const [addMenuPos, setAddMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
     const [confirmDeleteRow, setConfirmDeleteRow] = useState(false);
@@ -496,7 +503,7 @@ const SortableRow = memo(function SortableRow({ row, pageWidth, scale, isFirst, 
                     <button
                         onClick={e => { e.stopPropagation(); onMoveUp(); }}
                         disabled={isFirst}
-                        title="Move row up"
+                        title={ t('canvas.move-row-up') }
                         className="p-0.5 rounded text-black/25 hover:text-black/60 hover:bg-black/5 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                     >
                         <ChevronUp className="w-3.5 h-3.5" />
@@ -504,7 +511,7 @@ const SortableRow = memo(function SortableRow({ row, pageWidth, scale, isFirst, 
                     <button
                         onClick={e => { e.stopPropagation(); onMoveDown(); }}
                         disabled={isLast}
-                        title="Move row down"
+                        title={ t('canvas.move-row-down') }
                         className="p-0.5 rounded text-black/25 hover:text-black/60 hover:bg-black/5 transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
                     >
                         <ChevronDown className="w-3.5 h-3.5" />
@@ -547,14 +554,14 @@ const SortableRow = memo(function SortableRow({ row, pageWidth, scale, isFirst, 
                         <>
                             <button
                                 onClick={handleDeleteRow}
-                                title="Delete row"
+                                title={ t('canvas.delete-row') }
                                 className="p-1 rounded-md text-black/25 hover:text-red-500 hover:bg-red-50 transition-colors"
                             >
                                 <Trash2 className="w-3.5 h-3.5" />
                             </button>
                             <button
                                 onClick={e => { e.stopPropagation(); dispatch({ type: 'DUPLICATE_ROW', payload: { rowId: row.id } }); }}
-                                title="Duplicate row (Ctrl+D)"
+                                title={ t('canvas.duplicate-row') }
                                 className="p-1 rounded-md text-black/25 hover:text-blue-500 hover:bg-blue-50 transition-colors"
                             >
                                 <Copy className="w-3.5 h-3.5" />
@@ -595,10 +602,11 @@ interface QuickStartProps {
 }
 
 const QuickStartTemplates = ({ onSelect }: QuickStartProps): ReactElement => {
+    const { t } = useTranslation();
     const templates = [
-        { id: 'header-body' as const, label: 'Header + Body', desc: 'A heading row followed by a text block' },
-        { id: 'two-column' as const, label: 'Two Columns', desc: 'A row split into two equal columns' },
-        { id: 'blank' as const, label: 'Blank Page', desc: 'Start with a single empty text block' },
+        { id: 'header-body' as const, label: t('canvas.template-header-body-label'), desc: t('canvas.template-header-body-desc') },
+        { id: 'two-column' as const, label: t('canvas.template-two-column-label'), desc: t('canvas.template-two-column-desc') },
+        { id: 'blank' as const, label: t('canvas.template-blank-label'), desc: t('canvas.template-blank-desc') },
     ];
 
     return (
@@ -619,27 +627,28 @@ const QuickStartTemplates = ({ onSelect }: QuickStartProps): ReactElement => {
 
 // Empty state
 const  EmptyState = ({ onInsert, onQuickStart }: { onInsert: (type: BlockType) => void; onQuickStart: (template: 'header-body' | 'two-column' | 'blank') => void }): ReactElement => {
+    const { t } = useTranslation();
     return (
         <div className="flex flex-col items-center gap-5 py-12">
             <LayoutTemplate className="w-10 h-10 text-black/15" />
             <div className="text-center">
-                <p className="text-sm font-[Lato-Regular] text-black/40 mb-1"> Your document is empty </p>
-                <p className="text-xs text-black/25"> Pick a template to get started, or add a block manually </p>
+                <p className="text-sm font-[Lato-Regular] text-black/40 mb-1"> { t('canvas.document-empty') } </p>
+                <p className="text-xs text-black/25"> { t('canvas.document-empty-hint') } </p>
             </div>
             <QuickStartTemplates onSelect={onQuickStart} />
             <div className="flex items-center gap-3 text-xs text-black/25">
                 <div className="w-12 border-t border-black/8" />
-                <span> or </span>
+                <span> { t('canvas.or') } </span>
                 <div className="w-12 border-t border-black/8" />
             </div>
-            <AddBlockButton onInsert={onInsert} label="Add first block" />
+            <AddBlockButton onInsert={onInsert} label={ t('canvas.add-first-block') } />
             <div className="mt-2 w-full max-w-xs border border-black/6 rounded-xl p-4 bg-[#FAFAFA]">
-                <p className="text-xs font-[Lato-Regular] text-black/40 uppercase tracking-wide mb-3">Quick tips</p>
+                <p className="text-xs font-[Lato-Regular] text-black/40 uppercase tracking-wide mb-3">{ t('canvas.quick-tips') }</p>
                 <div className="flex flex-col gap-2.5">
-                    <Tip icon={<FileText className="w-3.5 h-3.5" />} label='Type "/" in a text block to add a new block' />
-                    <Tip icon={<AtSign className="w-3.5 h-3.5" />} label='Type "@" to insert a field token' />
-                    <Tip icon={<LayoutTemplate className="w-3.5 h-3.5" />} label="Use the ⊞ icon on a row to split into 2-4 columns" />
-                    <Tip icon={<Hash className="w-3.5 h-3.5" />} label="Enable Page Numbers in Document Settings → Footer" />
+                    <Tip icon={<FileText className="w-3.5 h-3.5" />} label={ t('canvas.tip-slash') } />
+                    <Tip icon={<AtSign className="w-3.5 h-3.5" />} label={ t('canvas.tip-at') } />
+                    <Tip icon={<LayoutTemplate className="w-3.5 h-3.5" />} label={ t('canvas.tip-grid') } />
+                    <Tip icon={<Hash className="w-3.5 h-3.5" />} label={ t('canvas.tip-page-numbers') } />
                 </div>
             </div>
         </div>
@@ -658,23 +667,24 @@ const Tip = ({ icon, label }: { icon: ReactElement; label: string }): ReactEleme
 // Reconciliation banner — surfaces orphan/incompatible tokens and offers a bulk-clear
 const ReconciliationBanner = ({ summary }: { summary: LayoutReconciliationSummary }): ReactElement | null => {
     const { dispatch } = useExportLayout();
+    const { t } = useTranslation();
     if (summary.issues.length === 0) return null;
 
     const parts: string[] = [];
-    if (summary.orphanedCount > 0) parts.push(`${summary.orphanedCount} removed`);
-    if (summary.incompatibleCount > 0) parts.push(`${summary.incompatibleCount} type-mismatched`);
+    if (summary.orphanedCount > 0) parts.push(`${summary.orphanedCount} ${t('canvas.removed')}`);
+    if (summary.incompatibleCount > 0) parts.push(`${summary.incompatibleCount} ${t('canvas.type-mismatched')}`);
 
     return (
         <div className="w-full max-w-3xl mx-auto flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-xl px-4 py-3 shadow-sm">
             <AlertTriangle className="w-4 h-4 shrink-0" />
             <div className="flex-1 flex flex-col">
-                <span className="text-sm font-[Lato-Bold]"> Layout references need review </span>
+                <span className="text-sm font-[Lato-Bold]"> { t('canvas.layout-needs-review') } </span>
                 <span className="text-xs font-[Lato-Regular] text-red-700/80">
-                    { parts.join(' · ') } token{ summary.issues.length === 1 ? '' : 's' } no longer resolve in this template version. Fix or clear them before saving.
+                    { parts.join(' · ') } token{ summary.issues.length === 1 ? '' : 's' } { t('canvas.layout-issues-suffix') }
                 </span>
             </div>
             <Button variant="danger" onClick={() => dispatch({ type: 'CLEAN_ORPHANS' })}>
-                Clear all references
+                { t('canvas.clear-references') }
             </Button>
         </div>
     );
@@ -682,17 +692,18 @@ const ReconciliationBanner = ({ summary }: { summary: LayoutReconciliationSummar
 
 // Zoom controls
 const ZoomControls = ({ scale, onZoomIn, onZoomOut, onFit }: { scale: number; onZoomIn: () => void; onZoomOut: () => void; onFit: () => void;}): ReactElement => {
+    const { t } = useTranslation();
     return (
         <div className="self-center flex items-center gap-1 bg-black/60 text-white text-xs px-2 py-1 rounded-full select-none">
-            <button onClick={onZoomOut} className="p-0.5 hover:bg-white/20 rounded transition-colors" title="Zoom out">
+            <button onClick={onZoomOut} className="p-0.5 hover:bg-white/20 rounded transition-colors" title={ t('canvas.zoom-out') }>
                 <ZoomOut className="w-3.5 h-3.5" />
             </button>
             <span className="w-10 text-center tabular-nums"> { Math.round(scale * 100) }% </span>
-            <button onClick={onZoomIn} className="p-0.5 hover:bg-white/20 rounded transition-colors" title="Zoom in">
+            <button onClick={onZoomIn} className="p-0.5 hover:bg-white/20 rounded transition-colors" title={ t('canvas.zoom-in') }>
                 <ZoomIn className="w-3.5 h-3.5" />
             </button>
             <div className="w-px h-3 bg-white/30 mx-0.5" />
-            <button onClick={onFit} className="p-0.5 hover:bg-white/20 rounded transition-colors" title="Fit to width">
+            <button onClick={onFit} className="p-0.5 hover:bg-white/20 rounded transition-colors" title={ t('canvas.fit-to-width') }>
                 <Maximize className="w-3.5 h-3.5" />
             </button>
         </div>
@@ -702,6 +713,7 @@ const ZoomControls = ({ scale, onZoomIn, onZoomOut, onFit }: { scale: number; on
 // Main canvas
 const BlockCanvas = (): ReactElement => {
     const { state, dispatch } = useExportLayout();
+    const { t } = useTranslation();
     const canvasRef = useRef<HTMLDivElement>(null);
     const paperRef = useRef<HTMLDivElement>(null);
     const [paperHeight, setPaperHeight] = useState(0);
@@ -921,7 +933,7 @@ const BlockCanvas = (): ReactElement => {
                             <div className="border-t-2 border-dashed border-blue-200" />
                             <div className="flex justify-center">
                                 <span className="text-[10px] text-blue-300 bg-blue-50 px-2 py-0.5 rounded-b-md font-medium">
-                                    Page { Math.round(y / pageHeightPx) + 1 }
+                                    { t('canvas.page-number', { n: Math.round(y / pageHeightPx) + 1 }) }
                                 </span>
                             </div>
                         </div>
@@ -960,7 +972,7 @@ const BlockCanvas = (): ReactElement => {
                                     <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
                                         { draggingBlockId ? (
                                             <div className="bg-white border-2 border-amber-400 rounded-xl shadow-xl px-4 py-3 text-xs text-amber-700 font-medium opacity-90 pointer-events-none">
-                                                Moving block…
+                                                { t('canvas.moving-block') }
                                             </div>
                                         ) : null }
                                     </DragOverlay>

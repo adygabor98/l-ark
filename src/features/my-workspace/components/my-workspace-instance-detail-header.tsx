@@ -1,6 +1,7 @@
 import {
     type ReactElement
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import type {
     OperationInstance
 } from '@l-ark/types';
@@ -43,6 +44,8 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
     const { instance, isReadOnly, progress, progressPct, allStepsCompleted, contextPanelOpen, onToggleContextPanel } = props;
     /** Navigation utilities */
     const navigate = useNavigate();
+    /** Translation utilities */
+    const { t } = useTranslation();
     /** Retrieve colors of the header */
     const colors = INSTANCE_STATUS_COLORS[instance.status as keyof typeof INSTANCE_STATUS_COLORS];
 
@@ -61,7 +64,7 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 						</Button>
 					</span>
 				</TooltipTrigger>
-				<TooltipContent side="bottom"> Back to workspace </TooltipContent>
+				<TooltipContent side="bottom"> { t('workspace.back-to-workspace') } </TooltipContent>
 			</Tooltip>
 
 			<div className="w-px h-8 bg-black/6 shrink-0" />
@@ -71,11 +74,11 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<span className="text-sm font-[Lato-Bold] text-black truncate cursor-default">
-								{ instance.title || "Untitled Instance" }
+								{ instance.title || t('workspace.untitled-instance') }
 							</span>
 						</TooltipTrigger>
 						<TooltipContent side="bottom" className="max-w-sm">
-							{ instance.title || "Untitled Instance" }
+							{ instance.title || t('workspace.untitled-instance') }
 						</TooltipContent>
 					</Tooltip>
 					{ instance.code &&
@@ -90,7 +93,7 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 					}
 					{ isReadOnly &&
 						<Badge variant="warning" className="text-[10px] font-[Lato-Bold] shrink-0 gap-1">
-							<Lock className="w-3 h-3" /> Read-only
+							<Lock className="w-3 h-3" /> { t('workspace.read-only') }
 						</Badge>
 					}
 					{/* Compact progress for small screens */}
@@ -116,7 +119,7 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 				<div className="text-right hidden md:block">
 					<div className="flex items-center gap-1.5 justify-end mb-1">
 						<span className="text-[10px] font-[Lato-Regular] text-black/35">
-							{ progress.completed}/{progress.total } steps
+							{ progress.completed}/{ progress.total } { t('workspace.steps') }
 						</span>
 						<span className={`text-[10px] font-[Lato-Bold] ${allStepsCompleted ? "text-emerald-600" : "text-black/40"}`}>
 							{ Math.round(progressPct) }%
@@ -141,7 +144,7 @@ const MyWorkspaceInstanceDetailHeader = (props: PropTypes): ReactElement => {
 						</span>
 					</TooltipTrigger>
 					<TooltipContent side="bottom">
-						{ contextPanelOpen ? "Hide details" : "Show details" } <span className="opacity-60 ml-1">]</span>
+						{ contextPanelOpen ? t('workspace.hide-details') : t('workspace.show-details') } <span className="opacity-60 ml-1">]</span>
 					</TooltipContent>
 				</Tooltip>
 			</div>
